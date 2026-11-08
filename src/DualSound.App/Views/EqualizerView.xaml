@@ -1,0 +1,43 @@
+<UserControl x:Class="DualSound.App.Views.EqualizerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:vm="clr-namespace:DualSound.App.ViewModels"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance vm:EqualizerViewModel}"
+             d:DesignHeight="600" d:DesignWidth="800">
+
+    <Grid HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="600">
+        <Border Style="{StaticResource CardPanel}" Padding="36,32">
+            <StackPanel HorizontalAlignment="Center">
+                <!-- Icon -->
+                <Border Background="#581C87" CornerRadius="12" Width="64" Height="64" HorizontalAlignment="Center" Margin="0,0,0,16">
+                    <Path Data="{StaticResource IconEqualizer}" Fill="{StaticResource BrushUsb}" Width="32" Height="32" Stretch="Uniform" />
+                </Border>
+
+                <!-- Coming Soon Badge -->
+                <Border Background="#3B0764" CornerRadius="4" Padding="10,4" HorizontalAlignment="Center" Margin="0,0,0,12">
+                    <TextBlock Text="COMING SOON • MILESTONE 03" Foreground="#E9D5FF" FontSize="11" FontWeight="Bold" />
+                </Border>
+
+                <!-- Title -->
+                <TextBlock Text="{Binding FeatureName}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,12" />
+
+                <!-- Description -->
+                <TextBlock Text="{Binding MilestoneDescription}" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextAlignment="Center" LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,20" />
+
+                <!-- Target Roadmap Box -->
+                <Border Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="16,12" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Planned Equalizer Capabilities:" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,6" />
+                        <TextBlock Text="• 10-band and 31-band graphic equalizer per output device" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
+                        <TextBlock Text="• Parametric EQ with customizable Q-factor and high/low shelf filters" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
+                        <TextBlock Text="• Individual room acoustic calibration for Home Theatre vs TV speakers" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
+                        <TextBlock Text="• Zero-latency BiQuad DSP filtering algorithms" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

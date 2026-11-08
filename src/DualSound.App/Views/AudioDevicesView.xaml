@@ -1,0 +1,274 @@
+<UserControl x:Class="DualSound.App.Views.AudioDevicesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:vm="clr-namespace:DualSound.App.ViewModels"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance vm:AudioDevicesViewModel}"
+             d:DesignHeight="700" d:DesignWidth="1000">
+
+    <Grid Margin="24,20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Top Header & Actions -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Audio Playback Devices" FontSize="22" FontWeight="Bold" />
+                <TextBlock Text="Real Windows audio endpoints discovered via CoreAudio MMDevice APIs" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Auto-detection Pill -->
+                <Button Style="{StaticResource OutlineButton}" Command="{Binding ToggleAutoRefreshCommand}" Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="8" Height="8" Margin="0,0,8,0"
+                                 Fill="{Binding AutoRefreshEnabled, Converter={StaticResource BoolToVis}, ConverterParameter=BrushSuccess}">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource BrushTextMuted}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding AutoRefreshEnabled}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource BrushSuccess}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="Live Plug &amp; Play Detection" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Refresh Button -->
+                <Button Style="{StaticResource PrimaryButton}" Command="{Binding RefreshDevicesCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolToVis}}">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource IconRefresh}" Fill="#FFFFFF" Width="13" Height="13" Stretch="Uniform" Margin="0,0,8,0" />
+                        <TextBlock Text="Refresh Devices" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Notification Banner -->
+        <Border Grid.Row="1" Background="{StaticResource BrushAccentMuted}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,14"
+                Visibility="{Binding StatusNotification, Converter={StaticResource StringToVis}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding StatusNotification}" Foreground="#BFDBFE" FontSize="12" FontWeight="Medium" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- Main Content Area: Master List + Details Drawer -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" MinWidth="380" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="2*" MinWidth="320" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Filter Bar + Devices List -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Search & Filters Toolbar -->
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="130" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Search Input -->
+                    <TextBox Grid.Column="0" Style="{StaticResource ModernTextBox}" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" VerticalContentAlignment="Center" Tag="Search devices..." />
+
+                    <!-- State Filter -->
+                    <ComboBox Grid.Column="1" Style="{StaticResource ModernComboBox}" ItemsSource="{Binding StateFilters}" SelectedItem="{Binding SelectedStateFilter}" Margin="0,0,8,0" />
+
+                    <!-- Type Filter -->
+                    <ComboBox Grid.Column="2" Style="{StaticResource ModernComboBox}" ItemsSource="{Binding TypeFilters}" SelectedItem="{Binding SelectedTypeFilter}" />
+                </Grid>
+
+                <!-- Devices List -->
+                <Border Grid.Row="1" Style="{StaticResource CardPanel}" Padding="0">
+                    <ListBox ItemsSource="{Binding FilteredDevices}"
+                             SelectedItem="{Binding SelectedDevice}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="0" />
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="Cursor" Value="Hand" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="ItemBorder"
+                                                    Background="Transparent"
+                                                    BorderBrush="{StaticResource BrushSurfaceBorderSubtle}"
+                                                    BorderThickness="0,0,0,1"
+                                                    Padding="14,10">
+                                                <ContentPresenter />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource BrushCardBackgroundHover}" />
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="#1E293B" />
+                                                    <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}" />
+                                                    <Setter TargetName="ItemBorder" Property="BorderThickness" Value="2,0,0,1" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- State Dot -->
+                                    <Ellipse Grid.Column="0" Width="10" Height="10"
+                                             Fill="{Binding State, Converter={StaticResource StateToBrush}}"
+                                             Margin="0,0,12,0" VerticalAlignment="Center" />
+
+                                    <!-- Main Info -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" MaxWidth="280" />
+                                            <!-- Default Badge -->
+                                            <Border Background="{StaticResource BrushAccentMuted}" CornerRadius="3" Padding="4,1" Margin="6,0,0,0"
+                                                    Visibility="{Binding IsDefaultPlayback, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="DEFAULT" Foreground="#93C5FD" FontSize="9" FontWeight="Bold" />
+                                            </Border>
+                                        </StackPanel>
+
+                                        <!-- Details line -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                            <TextBlock Text="{Binding StateDescription}" FontSize="11" Foreground="{Binding State, Converter={StaticResource StateToBrush}}" Margin="0,0,10,0" />
+                                            <TextBlock Text="{Binding FormattedAudioFormat}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Connection Type Badge -->
+                                    <Border Grid.Column="2" CornerRadius="4" Padding="6,3" Background="{StaticResource BrushCardBackgroundHover}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DeviceTypeDescription}"
+                                                   Foreground="{Binding DeviceType, Converter={StaticResource TypeToBrush}}"
+                                                   FontSize="10" FontWeight="Medium" />
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </Grid>
+
+            <!-- Right: Selected Device Inspector -->
+            <Border Grid.Column="2" Style="{StaticResource CardPanel}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <!-- Title & Type Badge -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Device Specification" FontSize="15" FontWeight="Bold" />
+                            <Border Grid.Column="1" CornerRadius="4" Padding="8,3" Background="{StaticResource BrushCardBackgroundHover}">
+                                <TextBlock Text="{Binding SelectedDevice.StateDescription, FallbackValue='No Selection'}"
+                                           Foreground="{Binding SelectedDevice.State, Converter={StaticResource StateToBrush}}"
+                                           FontSize="11" FontWeight="SemiBold" />
+                            </Border>
+                        </Grid>
+
+                        <Separator Background="{StaticResource BrushSurfaceBorder}" Margin="0,0,0,16" />
+
+                        <!-- Name -->
+                        <TextBlock Text="FRIENDLY NAME" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                        <TextBlock Text="{Binding SelectedDevice.Name, FallbackValue='Select a device to view properties'}"
+                                   FontSize="15" FontWeight="SemiBold" Margin="0,2,0,14" TextWrapping="Wrap" />
+
+                        <!-- Connection Category -->
+                        <TextBlock Text="CONNECTION TYPE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                        <TextBlock Text="{Binding SelectedDevice.DeviceTypeDescription, FallbackValue='-'}"
+                                   FontSize="13" FontWeight="Medium"
+                                   Foreground="{Binding SelectedDevice.DeviceType, Converter={StaticResource TypeToBrush}}"
+                                   Margin="0,2,0,14" />
+
+                        <!-- Audio Format -->
+                        <TextBlock Text="AUDIO FORMAT SPECIFICATION" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                        <TextBlock Text="{Binding SelectedDevice.FormattedAudioFormat, FallbackValue='-'}"
+                                   FontSize="13" Foreground="{StaticResource BrushTextPrimary}" Margin="0,2,0,14" />
+
+                        <!-- Hardware Adapter -->
+                        <TextBlock Text="AUDIO ADAPTER / DRIVER" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                        <TextBlock Text="{Binding SelectedDevice.AdapterName, FallbackValue='-'}"
+                                   FontSize="13" Foreground="{StaticResource BrushTextPrimary}" Margin="0,2,0,14" />
+
+                        <!-- Windows Bus / Enumerator -->
+                        <TextBlock Text="BUS ENUMERATOR" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                        <TextBlock Text="{Binding SelectedDevice.EnumeratorName, FallbackValue='-'}"
+                                   FontSize="12" FontFamily="Consolas" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,14" />
+
+                        <!-- Role Status -->
+                        <TextBlock Text="WINDOWS ROLES" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,14">
+                            <Border CornerRadius="4" Padding="6,2" Background="{StaticResource BrushAccentMuted}" Margin="0,0,6,0"
+                                    Visibility="{Binding SelectedDevice.IsDefaultPlayback, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Default Playback" Foreground="#93C5FD" FontSize="10" FontWeight="Bold" />
+                            </Border>
+                            <Border CornerRadius="4" Padding="6,2" Background="#312E81" Margin="0,0,6,0"
+                                    Visibility="{Binding SelectedDevice.IsDefaultCommunications, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Default Communications" Foreground="#C7D2FE" FontSize="10" FontWeight="Bold" />
+                            </Border>
+                            <TextBlock Text="Standard Output Endpoint" Foreground="{StaticResource BrushTextMuted}" FontSize="12"
+                                       Visibility="{Binding SelectedDevice.IsDefaultPlayback, Converter={StaticResource InverseBoolToVis}}" />
+                        </StackPanel>
+
+                        <!-- Device Endpoint ID -->
+                        <TextBlock Text="COREAUDIO ENDPOINT ID" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                        <TextBox Text="{Binding SelectedDevice.Id, Mode=OneWay, FallbackValue='-'}"
+                                 IsReadOnly="True"
+                                 Style="{StaticResource ModernTextBox}"
+                                 FontFamily="Consolas" FontSize="10"
+                                 Margin="0,4,0,14" />
+
+                        <!-- Hardware Instance ID -->
+                        <TextBlock Text="DEVICE INSTANCE ID" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                        <TextBox Text="{Binding SelectedDevice.InstanceId, Mode=OneWay, FallbackValue='-'}"
+                                 IsReadOnly="True"
+                                 Style="{StaticResource ModernTextBox}"
+                                 FontFamily="Consolas" FontSize="10"
+                                 Margin="0,4,0,0" />
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

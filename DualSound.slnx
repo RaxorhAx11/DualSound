@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DualSound.App/DualSound.App.csproj" />
+    <Project Path="src/DualSound.Audio/DualSound.Audio.csproj" />
+    <Project Path="src/DualSound.Contracts/DualSound.Contracts.csproj" />
+    <Project Path="src/DualSound.Core/DualSound.Core.csproj" />
+    <Project Path="src/DualSound.Infrastructure/DualSound.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DualSound.Tests/DualSound.Tests.csproj" />
+  </Folder>
+</Solution>
