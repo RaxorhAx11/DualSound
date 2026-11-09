@@ -6,273 +6,314 @@
              xmlns:vm="clr-namespace:DualSound.App.ViewModels"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance vm:DashboardViewModel}"
-             d:DesignHeight="700" d:DesignWidth="950">
+             d:DesignHeight="650" d:DesignWidth="980">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="28,24" MaxWidth="1100" HorizontalAlignment="Stretch">
+    <!-- Responsive minimal container without unnecessary scrolling on normal desktop screens -->
+    <Grid Margin="28,20" VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-            <!-- Top Header & Action -->
-            <Grid Margin="0,0,0,24">
+        <!-- 1. Application Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Brand, Title & Description -->
+            <StackPanel Grid.Column="0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="DualSound" FontSize="22" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" />
+                    <!-- Engine Status Indicator Badge -->
+                    <Border Background="{StaticResource BrushCardBackgroundHover}" BorderBrush="{StaticResource BrushSurfaceBorder}" BorderThickness="1" CornerRadius="12" Padding="10,3" Margin="14,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse Width="7" Height="7" Fill="{StaticResource BrushSuccess}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding EngineStatus}" FontSize="11" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                <TextBlock Text="Offline multi-device audio distributor for Windows 11" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" />
+            </StackPanel>
+
+            <!-- System Scan / Refresh Action -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource OutlineButton}"
+                        Command="{Binding LoadDashboardCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolToVis}}"
+                        Height="34" Padding="14,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource IconRefresh}" Fill="{StaticResource BrushTextPrimary}" Width="13" Height="13" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Scan System" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Busy / Scanning Banner -->
+        <Border Grid.Row="1" Background="{StaticResource BrushAccentMuted}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,16"
+                Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding BusyMessage}" Foreground="#93C5FD" FontSize="12" FontWeight="Medium" />
+            </StackPanel>
+        </Border>
+
+        <!-- 2. Audio Device Section: Two Main Output Cards (TV / HDMI & Home Theatre / 3.5 mm) -->
+        <Grid Grid.Row="2" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="18" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Card 1: TV / HDMI -->
+            <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="18,16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Card Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="#164E63" CornerRadius="6" Width="34" Height="34" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <Path Data="{StaticResource IconHdmi}" Fill="{StaticResource BrushHdmi}" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="TV / HDMI Output" FontSize="15" FontWeight="SemiBold" />
+                            <TextBlock Text="Primary Video &amp; Ambient Channel" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
+                        </StackPanel>
+
+                        <!-- Selection Status Badge -->
+                        <Border Grid.Column="2" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                Background="{StaticResource BrushAccentMuted}"
+                                Visibility="{Binding IsHdmiSelected, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Selected" Foreground="#93C5FD" FontSize="10" FontWeight="Bold" />
+                        </Border>
+                    </Grid>
+
+                    <Separator Grid.Row="1" Background="{StaticResource BrushSurfaceBorderSubtle}" Margin="0,0,0,12" />
+
+                    <!-- Device Selector Dropdown -->
+                    <StackPanel Grid.Row="2" Margin="0,0,0,14">
+                        <TextBlock Text="ASSIGNED DEVICE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,5" />
+                        <ComboBox Style="{StaticResource ModernComboBox}"
+                                  ItemsSource="{Binding AvailableHdmiDevices}"
+                                  SelectedItem="{Binding SelectedHdmiDevice, Mode=TwoWay}"
+                                  Height="32">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="2,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Ellipse Grid.Column="0" Width="7" Height="7" Fill="{Binding State, Converter={StaticResource StateToBrush}}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Device Properties Grid -->
+                    <Grid Grid.Row="3" Margin="0,0,0,14">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Connection Type -->
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
+                            <TextBlock Text="CONNECTION TYPE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding SelectedHdmiDevice.DeviceTypeDescription, FallbackValue='Not identified'}"
+                                       FontSize="12" FontWeight="Medium" Foreground="{Binding SelectedHdmiDevice.DeviceType, Converter={StaticResource TypeToBrush}}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <!-- Windows State -->
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                            <TextBlock Text="WINDOWS STATE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding SelectedHdmiDevice.StateDescription, FallbackValue='No device'}"
+                                       FontSize="12" FontWeight="Medium" Foreground="{Binding SelectedHdmiDevice.State, Converter={StaticResource StateToBrush}}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <!-- Driver Adapter -->
+                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2">
+                            <TextBlock Text="HARDWARE ADAPTER" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding SelectedHdmiDevice.AdapterName, FallbackValue='-'}"
+                                       FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Connection Availability Footer -->
+                    <Border Grid.Row="4" Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="12,8" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Availability: " FontSize="11" FontWeight="Medium" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding HdmiConnectionAvailability}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Card 2: Home Theatre / 3.5 mm -->
+            <Border Grid.Column="2" Style="{StaticResource CardPanel}" Padding="18,16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Card Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="#1E3A8A" CornerRadius="6" Width="34" Height="34" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <Path Data="{StaticResource IconAudioJack}" Fill="{StaticResource BrushAnalog}" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Home Theatre / 3.5 mm Output" FontSize="15" FontWeight="SemiBold" />
+                            <TextBlock Text="Surround &amp; Acoustic Bass Channel" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
+                        </StackPanel>
+
+                        <!-- Selection Status Badge -->
+                        <Border Grid.Column="2" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                Background="{StaticResource BrushAccentMuted}"
+                                Visibility="{Binding IsAnalogSelected, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Selected" Foreground="#93C5FD" FontSize="10" FontWeight="Bold" />
+                        </Border>
+                    </Grid>
+
+                    <Separator Grid.Row="1" Background="{StaticResource BrushSurfaceBorderSubtle}" Margin="0,0,0,12" />
+
+                    <!-- Device Selector Dropdown -->
+                    <StackPanel Grid.Row="2" Margin="0,0,0,14">
+                        <TextBlock Text="ASSIGNED DEVICE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,5" />
+                        <ComboBox Style="{StaticResource ModernComboBox}"
+                                  ItemsSource="{Binding AvailableAnalogDevices}"
+                                  SelectedItem="{Binding SelectedAnalogDevice, Mode=TwoWay}"
+                                  Height="32">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="2,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Ellipse Grid.Column="0" Width="7" Height="7" Fill="{Binding State, Converter={StaticResource StateToBrush}}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Device Properties Grid -->
+                    <Grid Grid.Row="3" Margin="0,0,0,14">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Connection Type -->
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
+                            <TextBlock Text="CONNECTION TYPE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding SelectedAnalogDevice.DeviceTypeDescription, FallbackValue='Not identified'}"
+                                       FontSize="12" FontWeight="Medium" Foreground="{Binding SelectedAnalogDevice.DeviceType, Converter={StaticResource TypeToBrush}}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <!-- Windows State -->
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                            <TextBlock Text="WINDOWS STATE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding SelectedAnalogDevice.StateDescription, FallbackValue='No device'}"
+                                       FontSize="12" FontWeight="Medium" Foreground="{Binding SelectedAnalogDevice.State, Converter={StaticResource StateToBrush}}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <!-- Driver Adapter -->
+                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2">
+                            <TextBlock Text="HARDWARE ADAPTER" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding SelectedAnalogDevice.AdapterName, FallbackValue='-'}"
+                                       FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Connection Availability Footer -->
+                    <Border Grid.Row="4" Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="12,8" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Availability: " FontSize="11" FontWeight="Medium" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding AnalogConnectionAvailability}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 3. Default Audio Device Section -->
+        <Border Grid.Row="3" Style="{StaticResource CardPanel}" Padding="16,12">
+            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="System Audio Overview" FontSize="24" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" />
-                    <TextBlock Text="Real-time Windows audio endpoint status and hardware readiness" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,4,0,0" />
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="WINDOWS DEFAULT PLAYBACK DEVICE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3" />
+                    <TextBlock Text="{Binding DefaultDevice.Name, FallbackValue='No default device detected'}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4" />
+
+                    <!-- Sample Rate & Channel Count -->
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Sample Rate: " FontSize="12" Foreground="{StaticResource BrushTextMuted}" />
+                        <TextBlock Text="{Binding DefaultDevice.FormattedSampleRate, FallbackValue='Unavailable'}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,16,0" />
+
+                        <TextBlock Text="Channels: " FontSize="12" Foreground="{StaticResource BrushTextMuted}" />
+                        <TextBlock Text="{Binding DefaultDevice.FormattedChannels, FallbackValue='Unavailable'}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextPrimary}" />
+                    </StackPanel>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource OutlineButton}" Command="{Binding LoadDashboardCommand}" Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource IconRefresh}" Fill="{StaticResource BrushTextPrimary}" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" />
-                            <TextBlock Text="Scan System" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                <!-- Navigation Action to Audio Devices Page -->
+                <Button Grid.Column="1" Style="{StaticResource OutlineButton}"
+                        Command="{Binding NavigateToDevicesCommand}"
+                        VerticalAlignment="Center" Height="32" Padding="14,0">
+                    <TextBlock Text="Manage in Audio Devices" VerticalAlignment="Center" />
+                </Button>
             </Grid>
+        </Border>
 
-            <!-- Busy State Indicator -->
-            <Border Background="{StaticResource BrushAccentMuted}" CornerRadius="6" Padding="12,8" Margin="0,0,0,16"
-                    Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding BusyMessage}" Foreground="#93C5FD" FontSize="13" />
-                </StackPanel>
-            </Border>
-
-            <!-- Target Hardware Setup Section -->
-            <TextBlock Text="TARGET HARDWARE SETUP" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" />
-            <Grid Margin="0,0,0,24">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="16" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <!-- TV via HDMI Card -->
-                <Border Grid.Column="0" Style="{StaticResource CardPanel}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                            <Border Background="#164E63" CornerRadius="6" Width="36" Height="36" Margin="0,0,12,0">
-                                <Path Data="{StaticResource IconHdmi}" Fill="{StaticResource BrushHdmi}" Width="18" Height="18" Stretch="Uniform" />
-                            </Border>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Primary Output: TV" FontSize="15" FontWeight="SemiBold" />
-                                <TextBlock Text="HDMI / DisplayPort Audio" FontSize="12" Foreground="{StaticResource BrushHdmi}" />
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="1" Margin="0,0,0,12">
-                            <TextBlock Text="Target device for video and ambient audio delivery." FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6" />
-                            <TextBlock Text="{Binding HdmiDevice.Name, FallbackValue='No HDMI endpoint currently active'}"
-                                       FontWeight="Medium" FontSize="13" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-
-                        <!-- Status Badge -->
-                        <Border Grid.Row="2" CornerRadius="4" Padding="8,4" HorizontalAlignment="Left"
-                                Background="{Binding IsHdmiReady, Converter={StaticResource BoolToVis}, ConverterParameter=BrushSuccess}">
-                            <TextBlock Text="{Binding IsHdmiReady, Converter={StaticResource BoolToVis}}" />
-                        </Border>
-                        <StackPanel Grid.Row="2" Orientation="Horizontal">
-                            <Border CornerRadius="4" Padding="8,4" HorizontalAlignment="Left"
-                                    Background="{StaticResource BrushSuccessBg}"
-                                    Visibility="{Binding IsHdmiReady, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="Ready for HDMI Routing" Foreground="{StaticResource BrushSuccess}" FontSize="11" FontWeight="SemiBold" />
-                            </Border>
-                            <Border CornerRadius="4" Padding="8,4" HorizontalAlignment="Left"
-                                    Background="{StaticResource BrushWarningBg}"
-                                    Visibility="{Binding IsHdmiReady, Converter={StaticResource InverseBoolToVis}}">
-                                <TextBlock Text="HDMI Display Not Detected" Foreground="{StaticResource BrushWarning}" FontSize="11" FontWeight="SemiBold" />
-                            </Border>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <!-- Home Theatre via 3.5mm Card -->
-                <Border Grid.Column="2" Style="{StaticResource CardPanel}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                            <Border Background="#1E3A8A" CornerRadius="6" Width="36" Height="36" Margin="0,0,12,0">
-                                <Path Data="{StaticResource IconAudioJack}" Fill="{StaticResource BrushAnalog}" Width="18" Height="18" Stretch="Uniform" />
-                            </Border>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Secondary Output: Home Theatre" FontSize="15" FontWeight="SemiBold" />
-                                <TextBlock Text="3.5 mm Analog Audio Jack" FontSize="12" Foreground="{StaticResource BrushAnalog}" />
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="1" Margin="0,0,0,12">
-                            <TextBlock Text="Target device for surround sound and high-fidelity acoustics." FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6" />
-                            <TextBlock Text="{Binding Analog35mmDevice.Name, FallbackValue='No 3.5mm analog endpoint active'}"
-                                       FontWeight="Medium" FontSize="13" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-
-                        <!-- Status Badge -->
-                        <StackPanel Grid.Row="2" Orientation="Horizontal">
-                            <Border CornerRadius="4" Padding="8,4" HorizontalAlignment="Left"
-                                    Background="{StaticResource BrushSuccessBg}"
-                                    Visibility="{Binding Is35mmReady, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="Ready for 3.5 mm Routing" Foreground="{StaticResource BrushSuccess}" FontSize="11" FontWeight="SemiBold" />
-                            </Border>
-                            <Border CornerRadius="4" Padding="8,4" HorizontalAlignment="Left"
-                                    Background="{StaticResource BrushWarningBg}"
-                                    Visibility="{Binding Is35mmReady, Converter={StaticResource InverseBoolToVis}}">
-                                <TextBlock Text="3.5 mm Jack Not Connected" Foreground="{StaticResource BrushWarning}" FontSize="11" FontWeight="SemiBold" />
-                            </Border>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-            </Grid>
-
-            <!-- Current Windows Default Playback Device -->
-            <TextBlock Text="WINDOWS DEFAULT PLAYBACK ENDPOINT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" />
-            <Border Style="{StaticResource CardPanel}" Margin="0,0,0,24">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                            <Border Background="{StaticResource BrushAccentMuted}" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
-                                <TextBlock Text="DEFAULT PLAYBACK" Foreground="#93C5FD" FontSize="10" FontWeight="Bold" />
-                            </Border>
-                            <TextBlock Text="{Binding DefaultDevice.DeviceTypeDescription}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" />
-                        </StackPanel>
-
-                        <TextBlock Text="{Binding DefaultDevice.Name, FallbackValue='None'}" FontSize="17" FontWeight="Bold" Margin="0,0,0,6" />
-
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Audio Specification: " Foreground="{StaticResource BrushTextMuted}" FontSize="12" />
-                            <TextBlock Text="{Binding DefaultDevice.FormattedAudioFormat, FallbackValue='Unknown'}" Foreground="{StaticResource BrushTextPrimary}" FontWeight="Medium" FontSize="12" Margin="0,0,16,0" />
-
-                            <TextBlock Text="Hardware Adapter: " Foreground="{StaticResource BrushTextMuted}" FontSize="12" />
-                            <TextBlock Text="{Binding DefaultDevice.AdapterName, FallbackValue='Unknown'}" Foreground="{StaticResource BrushTextSecondary}" FontSize="12" />
-                        </StackPanel>
-
-                        <TextBlock Text="{Binding DefaultDevice.Id}" Foreground="{StaticResource BrushTextMuted}" FontSize="11" FontFamily="Consolas" Margin="0,6,0,0" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-
-                    <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center" Command="{Binding NavigateToDevicesCommand}">
-                        <TextBlock Text="Manage Devices" />
-                    </Button>
-                </Grid>
-            </Border>
-
-            <!-- Discovered Endpoint Categories Summary Grid -->
-            <TextBlock Text="ENDPOINT BREAKDOWN BY CONNECTION TYPE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" />
-            <Grid Margin="0,0,0,24">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="12" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="12" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="12" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="12" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <!-- Active -->
-                <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="12">
-                    <StackPanel>
-                        <TextBlock Text="ACTIVE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushSuccess}" />
-                        <TextBlock Text="{Binding ActiveEndpointsCount}" FontSize="24" FontWeight="Bold" Margin="0,4,0,0" />
-                        <TextBlock Text="Ready for output" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
-                    </StackPanel>
-                </Border>
-
-                <!-- HDMI -->
-                <Border Grid.Column="2" Style="{StaticResource CardPanel}" Padding="12">
-                    <StackPanel>
-                        <TextBlock Text="HDMI / DP" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushHdmi}" />
-                        <TextBlock Text="{Binding HdmiEndpointsCount}" FontSize="24" FontWeight="Bold" Margin="0,4,0,0" />
-                        <TextBlock Text="Digital display" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
-                    </StackPanel>
-                </Border>
-
-                <!-- 3.5mm -->
-                <Border Grid.Column="4" Style="{StaticResource CardPanel}" Padding="12">
-                    <StackPanel>
-                        <TextBlock Text="3.5mm / ANALOG" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushAnalog}" />
-                        <TextBlock Text="{Binding AnalogEndpointsCount}" FontSize="24" FontWeight="Bold" Margin="0,4,0,0" />
-                        <TextBlock Text="Jack / Speakers" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
-                    </StackPanel>
-                </Border>
-
-                <!-- USB -->
-                <Border Grid.Column="6" Style="{StaticResource CardPanel}" Padding="12">
-                    <StackPanel>
-                        <TextBlock Text="USB AUDIO" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushUsb}" />
-                        <TextBlock Text="{Binding UsbEndpointsCount}" FontSize="24" FontWeight="Bold" Margin="0,4,0,0" />
-                        <TextBlock Text="External DAC/Card" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
-                    </StackPanel>
-                </Border>
-
-                <!-- Virtual -->
-                <Border Grid.Column="8" Style="{StaticResource CardPanel}" Padding="12">
-                    <StackPanel>
-                        <TextBlock Text="VIRTUAL" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushVirtual}" />
-                        <TextBlock Text="{Binding VirtualEndpointsCount}" FontSize="24" FontWeight="Bold" Margin="0,4,0,0" />
-                        <TextBlock Text="Software bridges" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
-                    </StackPanel>
-                </Border>
-            </Grid>
-
-            <!-- Active Devices Quick List -->
-            <TextBlock Text="CURRENT ACTIVE PLAYBACK DEVICES" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" />
-            <Border Style="{StaticResource CardPanel}" Padding="0">
-                <ItemsControl ItemsSource="{Binding ActiveDevices}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="0,0,0,1" Padding="16,12">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Status Circle -->
-                                    <Ellipse Grid.Column="0" Width="10" Height="10" Fill="{StaticResource BrushSuccess}" Margin="0,0,12,0" VerticalAlignment="Center" />
-
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" />
-                                            <Border Background="{StaticResource BrushAccentMuted}" CornerRadius="3" Padding="4,1" Margin="8,0,0,0"
-                                                    Visibility="{Binding IsDefaultPlayback, Converter={StaticResource BoolToVis}}">
-                                                <TextBlock Text="DEFAULT" Foreground="#93C5FD" FontSize="9" FontWeight="Bold" />
-                                            </Border>
-                                        </StackPanel>
-                                        <TextBlock Text="{Binding FormattedAudioFormat}" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0" />
-                                    </StackPanel>
-
-                                    <Border Grid.Column="2" CornerRadius="4" Padding="8,4" Background="{StaticResource BrushCardBackgroundHover}" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding DeviceTypeDescription}" Foreground="{Binding DeviceType, Converter={StaticResource TypeToBrush}}" FontSize="11" FontWeight="Medium" />
-                                    </Border>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </Border>
-
-        </StackPanel>
-    </ScrollViewer>
+    </Grid>
 </UserControl>
-

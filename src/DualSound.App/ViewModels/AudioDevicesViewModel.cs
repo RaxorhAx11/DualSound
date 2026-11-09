@@ -15,6 +15,7 @@ namespace DualSound.App.ViewModels;
 
 /// <summary>
 /// ViewModel for audio device enumeration, filtering, inspection, and real-time lifecycle tracking.
+/// Provides actual Windows audio endpoint data with clean filtering (All, Active, Disconnected, Disabled).
 /// </summary>
 public sealed partial class AudioDevicesViewModel : ViewModelBase
 {
@@ -23,6 +24,8 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
     private readonly ISettingsService _settingsService;
     private readonly IDispatcherService _dispatcherService;
     private readonly ILogger<AudioDevicesViewModel> _logger;
+
+    private Task? _currentRefreshTask;
 
     [ObservableProperty]
     private ObservableCollection<AudioDeviceInfo> _devices = [];
@@ -40,10 +43,7 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
     private string _searchQuery = string.Empty;
 
     [ObservableProperty]
-    private string _selectedStateFilter = "All States";
-
-    [ObservableProperty]
-    private string _selectedTypeFilter = "All Types";
+    private string _selectedFilter = "All";
 
     [ObservableProperty]
     private bool _autoRefreshEnabled = true;
@@ -57,10 +57,10 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
     [ObservableProperty]
     private int _totalDeviceCount;
 
-    public string[] StateFilters { get; } = ["All States", "Active Only", "Unplugged", "Disabled", "Not Present"];
-    public string[] TypeFilters { get; } = ["All Types", "HDMI / DisplayPort", "3.5 mm / Analog", "USB Audio", "Bluetooth Audio", "Virtual Audio"];
+    [ObservableProperty]
+    private bool _hasNoDevices;
 
-    private Task? _currentRefreshTask;
+    public string[] DeviceFilters { get; } = ["All", "Active", "Disconnected", "Disabled"];
 
     public AudioDevicesViewModel(
         IAudioDeviceDiscoveryService discoveryService,
@@ -75,7 +75,7 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
         _dispatcherService = dispatcherService;
         _logger = logger;
 
-        Title = "Audio Endpoints";
+        Title = "Audio Devices";
 
         _autoRefreshEnabled = _settingsService.CurrentSettings.AutoRefreshDevices;
         _monitorService.DeviceChanged += OnAudioDeviceChanged;
@@ -112,7 +112,7 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
     private async Task RefreshDevicesInternalAsync()
     {
         IsBusy = true;
-        BusyMessage = "Enumerating Windows audio endpoints...";
+        BusyMessage = "Scanning Windows audio endpoints...";
         ClearError();
 
         try
@@ -137,7 +137,7 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
 
                 ApplyFilter();
 
-                // Maintain selection or select first
+                // Maintain selection or select default
                 if (SelectedDevice != null)
                 {
                     SelectedDevice = Devices.FirstOrDefault(d => d.Id == SelectedDevice.Id) ?? Devices.FirstOrDefault();
@@ -166,6 +166,7 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
     private void ClearSearch()
     {
         SearchQuery = string.Empty;
+        SelectedFilter = "All";
     }
 
     [RelayCommand]
@@ -180,7 +181,7 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
             try
             {
                 _monitorService.StartMonitoring();
-                StatusNotification = "Real-time device monitoring enabled";
+                StatusNotification = "Real-time plug and play monitoring enabled";
             }
             catch (Exception ex)
             {
@@ -190,18 +191,16 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
         else
         {
             _monitorService.StopMonitoring();
-            StatusNotification = "Real-time device monitoring disabled";
+            StatusNotification = "Real-time plug and play monitoring disabled";
         }
     }
 
     partial void OnSearchQueryChanged(string value) => ApplyFilter();
-    partial void OnSelectedStateFilterChanged(string value) => ApplyFilter();
-    partial void OnSelectedTypeFilterChanged(string value) => ApplyFilter();
+    partial void OnSelectedFilterChanged(string value) => ApplyFilter();
 
     private void ApplyFilter()
     {
         var query = SearchQuery?.Trim() ?? string.Empty;
-
         var items = Devices.AsEnumerable();
 
         if (!string.IsNullOrEmpty(query))
@@ -209,49 +208,19 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
             items = items.Where(d =>
                 d.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 d.AdapterName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                d.DeviceTypeDescription.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                d.Id.Contains(query, StringComparison.OrdinalIgnoreCase));
+                d.DeviceTypeDescription.Contains(query, StringComparison.OrdinalIgnoreCase));
         }
 
-        if (SelectedStateFilter == "Active Only")
+        items = SelectedFilter switch
         {
-            items = items.Where(d => d.State == AudioDeviceState.Active);
-        }
-        else if (SelectedStateFilter == "Unplugged")
-        {
-            items = items.Where(d => d.State == AudioDeviceState.Unplugged);
-        }
-        else if (SelectedStateFilter == "Disabled")
-        {
-            items = items.Where(d => d.State == AudioDeviceState.Disabled);
-        }
-        else if (SelectedStateFilter == "Not Present")
-        {
-            items = items.Where(d => d.State == AudioDeviceState.NotPresent);
-        }
-
-        if (SelectedTypeFilter == "HDMI / DisplayPort")
-        {
-            items = items.Where(d => d.DeviceType == AudioDeviceType.HdmiDisplayPort);
-        }
-        else if (SelectedTypeFilter == "3.5 mm / Analog")
-        {
-            items = items.Where(d => d.DeviceType is AudioDeviceType.LineOut35mm or AudioDeviceType.Headphones or AudioDeviceType.Speakers);
-        }
-        else if (SelectedTypeFilter == "USB Audio")
-        {
-            items = items.Where(d => d.DeviceType == AudioDeviceType.UsbAudio);
-        }
-        else if (SelectedTypeFilter == "Bluetooth Audio")
-        {
-            items = items.Where(d => d.DeviceType == AudioDeviceType.BluetoothAudio);
-        }
-        else if (SelectedTypeFilter == "Virtual Audio")
-        {
-            items = items.Where(d => d.DeviceType == AudioDeviceType.VirtualAudio);
-        }
+            "Active" => items.Where(d => d.State == AudioDeviceState.Active),
+            "Disconnected" => items.Where(d => d.State is AudioDeviceState.Unplugged or AudioDeviceState.NotPresent),
+            "Disabled" => items.Where(d => d.State == AudioDeviceState.Disabled),
+            _ => items
+        };
 
         FilteredDevices = new ObservableCollection<AudioDeviceInfo>(items);
+        HasNoDevices = FilteredDevices.Count == 0;
     }
 
     private void OnAudioDeviceChanged(object? sender, DeviceChangeEventArgs e)
@@ -260,14 +229,13 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
         {
             StatusNotification = e.ChangeType switch
             {
-                DeviceChangeType.DeviceAdded => "Audio device connected",
-                DeviceChangeType.DeviceRemoved => "Audio device disconnected",
-                DeviceChangeType.DeviceStateChanged => $"Audio device status updated: {e.NewState}",
-                DeviceChangeType.DefaultDeviceChanged => "Default Windows playback device changed",
-                _ => "Audio endpoints updated"
+                DeviceChangeType.DeviceAdded => "Audio hardware connected",
+                DeviceChangeType.DeviceRemoved => "Audio hardware disconnected",
+                DeviceChangeType.DeviceStateChanged => $"Device state changed: {e.NewState}",
+                DeviceChangeType.DefaultDeviceChanged => "Default Windows playback endpoint changed",
+                _ => "Audio devices updated"
             };
 
-            // Automatically refresh device list to reflect the change
             _ = RefreshDevicesAsync();
         });
     }

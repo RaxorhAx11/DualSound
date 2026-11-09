@@ -53,7 +53,7 @@ public class ViewModelLifecycleTests
         // Navigate to Audio Devices
         navService.NavigateTo<AudioDevicesViewModel>();
         Assert.IsType<AudioDevicesViewModel>(mainVm.CurrentView);
-        Assert.Equal("Audio Endpoints", mainVm.CurrentView.Title);
+        Assert.Equal("Audio Devices", mainVm.CurrentView.Title);
 
         // Navigate to Audio Routing (Coming Soon)
         navService.NavigateTo<AudioRoutingViewModel>();
@@ -97,6 +97,59 @@ public class ViewModelLifecycleTests
 
         devicesVm.SearchQuery = string.Empty;
         Assert.NotEmpty(devicesVm.FilteredDevices);
+    }
+
+    [Fact]
+    public async Task DashboardViewModel_LoadsAndPopulatesCards()
+    {
+        var dashboardVm = _serviceProvider.GetRequiredService<DashboardViewModel>();
+        await dashboardVm.LoadDashboardAsync();
+
+        Assert.NotNull(dashboardVm.EngineStatus);
+        Assert.Contains("Offline", dashboardVm.EngineStatus);
+        Assert.NotNull(dashboardVm.DefaultDevice);
+        Assert.NotEmpty(dashboardVm.AllPlaybackDevices);
+    }
+
+    [Fact]
+    public async Task DashboardViewModel_AnalogAvailability_DisplaysUnavailableWhenActive()
+    {
+        var dashboardVm = _serviceProvider.GetRequiredService<DashboardViewModel>();
+        await dashboardVm.LoadDashboardAsync();
+
+        if (dashboardVm.SelectedAnalogDevice != null && dashboardVm.SelectedAnalogDevice.IsActive)
+        {
+            // Must strictly display "Connection status unavailable" per prompt instructions
+            Assert.Equal("Connection status unavailable", dashboardVm.AnalogConnectionAvailability);
+        }
+    }
+
+    [Fact]
+    public async Task DashboardViewModel_DeviceSelection_UpdatesSettings()
+    {
+        var dashboardVm = _serviceProvider.GetRequiredService<DashboardViewModel>();
+        var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
+        await dashboardVm.LoadDashboardAsync();
+
+        if (dashboardVm.AvailableHdmiDevices.Count > 0)
+        {
+            var testDev = dashboardVm.AvailableHdmiDevices[0];
+            dashboardVm.SelectedHdmiDevice = testDev;
+            Assert.Equal(testDev.Id, settingsService.CurrentSettings.PreferredPrimaryDeviceId);
+        }
+    }
+
+    [Fact]
+    public async Task AudioDevicesViewModel_FiltersWorkAgainstDeviceData()
+    {
+        var devicesVm = _serviceProvider.GetRequiredService<AudioDevicesViewModel>();
+        await devicesVm.RefreshDevicesAsync();
+
+        devicesVm.SelectedFilter = "Active";
+        Assert.All(devicesVm.FilteredDevices, d => Assert.True(d.IsActive));
+
+        devicesVm.SelectedFilter = "All";
+        Assert.Equal(devicesVm.TotalDeviceCount, devicesVm.FilteredDevices.Count);
     }
 
     private sealed class TestDispatcherService : IDispatcherService

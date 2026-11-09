@@ -1,0 +1,5 @@
+# 1. Ensure .NET 10 is in your session PATH (if not already set globally)
+$env:PATH = "$env:USERPROFILE\.dotnet;" + $env:PATH
+
+# 2. Run the application
+dotnet run --project src/DualSound.App/DualSound.App.csproj

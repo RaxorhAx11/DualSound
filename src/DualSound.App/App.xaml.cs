@@ -126,6 +126,15 @@ public partial class App : Application
 
     private void LogFatalException(Exception? ex, string source)
     {
+        try
+        {
+            var folder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DualSound");
+            System.IO.Directory.CreateDirectory(folder);
+            var logPath = System.IO.Path.Combine(folder, "app_debug.log");
+            System.IO.File.AppendAllText(logPath, $"[{DateTime.UtcNow:O}] [{source}] {ex}\n\n");
+        }
+        catch { }
+
         var logger = _host?.Services.GetService<ILogger<App>>();
         if (logger != null && ex != null)
         {

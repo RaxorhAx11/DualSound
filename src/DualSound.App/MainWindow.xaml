@@ -8,8 +8,8 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
         Title="DualSound – Offline Windows Audio Processor"
-        Height="780" Width="1220"
-        MinHeight="650" MinWidth="960"
+        Height="720" Width="1180"
+        MinHeight="600" MinWidth="960"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BrushAppBackground}">
 
@@ -38,17 +38,17 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
-            <RowDefinition Height="32" />
+            <RowDefinition Height="30" />
         </Grid.RowDefinitions>
 
         <!-- Main Shell Area: Sidebar + Content -->
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="200" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- Left Navigation Sidebar -->
+            <!-- Compact Navigation Sidebar -->
             <Border Grid.Column="0" Background="{StaticResource BrushSidebarBackground}" BorderBrush="{StaticResource BrushSurfaceBorder}" BorderThickness="0,0,1,0">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -58,16 +58,14 @@
                     </Grid.RowDefinitions>
 
                     <!-- App Brand / Logo -->
-                    <Border Grid.Row="0" Padding="20,24,20,20" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="0,0,0,1">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Border Background="{StaticResource BrushAccent}" CornerRadius="8" Width="32" Height="32" Margin="0,0,12,0">
-                                    <Path Data="{StaticResource IconSpeaker}" Fill="#FFFFFF" Width="16" Height="16" Stretch="Uniform" />
-                                </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="DUALSOUND" FontSize="16" FontWeight="Black" Foreground="#FFFFFF" />
-                                    <TextBlock Text="Offline Audio Processor" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,1,0,0" />
-                                </StackPanel>
+                    <Border Grid.Row="0" Padding="16,20,16,16" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="0,0,0,1">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Background="{StaticResource BrushAccent}" CornerRadius="6" Width="28" Height="28" Margin="0,0,10,0" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconSpeaker}" Fill="#FFFFFF" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="DUALSOUND" FontSize="15" FontWeight="Bold" Foreground="#FFFFFF" />
+                                <TextBlock Text="Audio Processor" FontSize="10" Foreground="{StaticResource BrushTextMuted}" Margin="0,1,0,0" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -79,19 +77,19 @@
                              ItemContainerStyle="{StaticResource NavigationItemContainerStyle}"
                              Background="Transparent"
                              BorderThickness="0"
-                             Margin="0,12,0,0">
+                             Margin="0,8,0,0">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Grid>
+                                <Grid Margin="4,2">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="28" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
 
                                     <!-- Vector Icon -->
                                     <Path Grid.Column="0"
                                           Data="{Binding IconGeometryKey, Converter={StaticResource StringToGeom}}"
-                                          Width="16" Height="16" Stretch="Uniform"
+                                          Width="15" Height="15" Stretch="Uniform"
                                           VerticalAlignment="Center">
                                         <Path.Style>
                                             <Style TargetType="Path">
@@ -124,26 +122,11 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <!-- Target Setup Hardware Card in Sidebar Footer -->
-                    <Border Grid.Row="2" Background="{StaticResource BrushCardBackground}" CornerRadius="8" Padding="14,12" Margin="14,12,14,16" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="HARDWARE TOPOLOGY" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,6" />
-                            <Grid Margin="0,2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Ellipse Grid.Column="0" Width="6" Height="6" Fill="{StaticResource BrushHdmi}" Margin="0,0,8,0" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Text="TV via HDMI" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
-                            </Grid>
-                            <Grid Margin="0,2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Ellipse Grid.Column="0" Width="6" Height="6" Fill="{StaticResource BrushAnalog}" Margin="0,0,8,0" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Text="Home Theatre (3.5mm)" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
-                            </Grid>
+                    <!-- Sidebar Footer: Offline indicator -->
+                    <Border Grid.Row="2" Padding="16,12" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="0,1,0,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse Width="6" Height="6" Fill="{StaticResource BrushSuccess}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Offline v1.0" FontSize="11" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -179,7 +162,7 @@
         </Grid>
 
         <!-- Bottom Application Status Bar -->
-        <Border Grid.Row="1" Background="{StaticResource BrushHeaderBackground}" BorderBrush="{StaticResource BrushSurfaceBorder}" BorderThickness="0,1,0,0" Padding="18,0">
+        <Border Grid.Row="1" Background="{StaticResource BrushHeaderBackground}" BorderBrush="{StaticResource BrushSurfaceBorder}" BorderThickness="0,1,0,0" Padding="16,0">
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -195,7 +178,7 @@
 
                 <!-- Center: Active Devices count -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="Active Audio Endpoints: " FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
+                    <TextBlock Text="Active Endpoints: " FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
                     <TextBlock Text="{Binding ActiveDevicesCount}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushSuccess}" />
                 </StackPanel>
 

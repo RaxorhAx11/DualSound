@@ -61,7 +61,8 @@ public sealed partial class MainViewModel : ViewModelBase
         _navigationService.CurrentViewModelChanged += (s, e) =>
         {
             CurrentView = _navigationService.CurrentViewModel;
-            SelectedNavigationItem = NavigationItems.FirstOrDefault(n => n.ViewModelType == CurrentView?.GetType());
+            _selectedNavigationItem = NavigationItems.FirstOrDefault(n => n.ViewModelType == CurrentView?.GetType());
+            OnPropertyChanged(nameof(SelectedNavigationItem));
         };
 
         _monitorService.DeviceChanged += OnAudioDeviceChanged;
@@ -71,6 +72,14 @@ public sealed partial class MainViewModel : ViewModelBase
 
         // Query default device name for status bar
         _ = UpdateStatusAsync();
+    }
+
+    partial void OnSelectedNavigationItemChanged(NavigationItem? value)
+    {
+        if (value != null && value.ViewModelType != CurrentView?.GetType())
+        {
+            _navigationService.NavigateTo(value.ViewModelType);
+        }
     }
 
     private void InitializeNavigation()

@@ -83,6 +83,25 @@ public sealed record AudioDeviceInfo
     public int BitsPerSample { get; init; }
 
     /// <summary>
+    /// Formatted sample rate string (e.g. "48.0 kHz" or "44.1 kHz").
+    /// </summary>
+    public string FormattedSampleRate => SampleRate > 0 ? $"{SampleRate:N0} Hz" : "Sample rate unavailable";
+
+    /// <summary>
+    /// Formatted channel count string (e.g. "Stereo (2 ch)", "5.1 Surround (6 ch)").
+    /// </summary>
+    public string FormattedChannels => Channels switch
+    {
+        1 => "1 Channel (Mono)",
+        2 => "2 Channels (Stereo)",
+        4 => "4 Channels (Quadraphonic)",
+        6 => "6 Channels (5.1 Surround)",
+        8 => "8 Channels (7.1 Surround)",
+        > 0 => $"{Channels} Channels",
+        _ => "Channels unavailable"
+    };
+
+    /// <summary>
     /// Formatted audio specification string (e.g. "48.0 kHz, 24-bit, Stereo (2 ch)").
     /// </summary>
     public string FormattedAudioFormat
