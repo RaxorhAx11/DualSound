@@ -124,4 +124,27 @@ public class OutputDelayBufferTests
         delayBuffer.Reset();
         Assert.Equal(0.0f, delayBuffer.BufferOccupancyPercentage);
     }
+
+    [Fact]
+    public void OutputDelayBuffer_ReducingDelay_TrimsExcessSamplesImmediately()
+    {
+        var delayBuffer = new OutputDelayBuffer(AudioOutputBranch.TvHdmi, SampleRate, Channels);
+
+        // Set initial delay to 50 ms (2400 frames = 4800 samples)
+        delayBuffer.SetDelayMilliseconds(50f);
+
+        // Write 4800 + 480 samples so we have delay + 1 playable packet
+        var input = new float[4800 + 480];
+        Array.Fill(input, 0.8f);
+        delayBuffer.Write(input.AsSpan());
+
+        // Now dynamically reduce delay to 10 ms (480 frames = 960 samples)
+        delayBuffer.SetDelayMilliseconds(10f);
+
+        // Next read of 480 samples should immediately be playable without waiting for buffer overflow
+        var output = new float[480];
+        delayBuffer.Read(output.AsSpan());
+
+        Assert.Equal(0.8f, output[0], precision: 2);
+    }
 }

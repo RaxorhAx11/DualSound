@@ -23,8 +23,10 @@ public sealed class BassProcessingSettings
 
     /// <summary>
     /// Whether the low-pass filter slope is active to isolate sub-bass frequencies.
+    /// Default is false so that 3.5 mm connections feeding combined home theatre satellite/subwoofer
+    /// inputs retain full-range audio including vocal dialogue.
     /// </summary>
-    public bool LowPassFilterEnabled { get; set; } = true;
+    public bool LowPassFilterEnabled { get; set; } = false;
 
     /// <summary>
     /// Sums left and right bass components to mono (L+R) to drive mono subwoofer configurations.

@@ -50,6 +50,9 @@ public sealed class WasapiCaptureService : IAudioCapture
     private int _sourceBitsPerSample;
     private string _sourceFormatDescription = "None";
 
+    // Reusable event packet buffer to eliminate allocations in real-time capture callback
+    private float[] _eventPacketBuffer = new float[8192];
+
     /// <inheritdoc />
     public AudioCaptureState State
     {
@@ -311,13 +314,18 @@ public sealed class WasapiCaptureService : IAudioCapture
 
             Interlocked.Add(ref _totalFramesCaptured, canonicalSamples.Length / 2);
 
-            // Dispatch packet event if subscribers are listening
+            // Dispatch packet event if subscribers are listening (allocation-free using reusable event buffer)
             if (AudioPacketReceived != null)
             {
-                var packetArray = canonicalSamples.ToArray();
+                if (_eventPacketBuffer.Length < canonicalSamples.Length)
+                {
+                    _eventPacketBuffer = new float[canonicalSamples.Length * 2];
+                }
+                canonicalSamples.CopyTo(_eventPacketBuffer.AsSpan(0, canonicalSamples.Length));
+
                 AudioPacketReceived.Invoke(this, new AudioPacketEventArgs(
-                    packetArray,
-                    packetArray.Length / 2,
+                    _eventPacketBuffer.AsMemory(0, canonicalSamples.Length),
+                    canonicalSamples.Length / 2,
                     _options.TargetSampleRate,
                     _options.TargetChannels));
             }

@@ -166,6 +166,38 @@ public class DspFilterTests
     }
 
     [Fact]
+    public void BassProcessor_DefaultFullRange_PassesDialogueAndHighFrequencies()
+    {
+        var bass = new BassProcessor(SampleRate);
+        // Default settings: LowPassFilterEnabled is false so full dialogue reaches the satellite speaker
+        var settings = new BassProcessingSettings
+        {
+            IsEnabled = true,
+            LowPassFilterEnabled = false,
+            BassGainDb = 0f,
+            MonoSubwooferMix = false
+        };
+
+        bass.ApplySettings(settings);
+
+        // 2.5 kHz speech formant tone
+        var buffer = new float[960];
+        for (int i = 0; i < buffer.Length; i += 2)
+        {
+            float val = 0.5f * (float)Math.Sin(2 * Math.PI * 2500 * (i / 2) / SampleRate);
+            buffer[i] = val;
+            buffer[i + 1] = val;
+        }
+
+        var peakBefore = GetPeak(buffer);
+        bass.Process(buffer.AsSpan());
+        var peakAfter = GetPeak(buffer);
+
+        // Dialogue must pass through unattenuated
+        Assert.Equal(peakBefore, peakAfter, precision: 3);
+    }
+
+    [Fact]
     public void BassProcessor_MonoSubwooferMix_SumsChannelsEqually()
     {
         var bass = new BassProcessor(SampleRate);

@@ -66,14 +66,29 @@ public sealed class OutputDelayBuffer
 
     /// <summary>
     /// Sets the desired synchronization delay in milliseconds (0 ms to 500 ms).
+    /// Immediately trims accumulated buffer samples if reducing delay to prevent latency lag.
     /// </summary>
     public void SetDelayMilliseconds(float delayMs)
     {
         lock (_syncLock)
         {
+            int oldTargetSamples = _targetDelaySamples;
             _targetDelayMs = Math.Clamp(delayMs, 0f, 500f);
             int targetFrames = (int)(_targetDelayMs * 0.001f * _sampleRate);
             _targetDelaySamples = targetFrames * _channels;
+
+            // If reducing delay while running, advance read pointer immediately to discard excess latency
+            if (_targetDelaySamples < oldTargetSamples && _availableSamples > _targetDelaySamples)
+            {
+                int currentPlayable = Math.Max(0, _availableSamples - oldTargetSamples);
+                int desiredAvailable = _targetDelaySamples + currentPlayable;
+                if (_availableSamples > desiredAvailable)
+                {
+                    int drop = _availableSamples - desiredAvailable;
+                    _readIndex = (_readIndex + drop) % _capacitySamples;
+                    _availableSamples = desiredAvailable;
+                }
+            }
         }
     }
 

@@ -52,7 +52,7 @@ public class AudioPresetAndEngineTests
         Assert.NotNull(preset);
         Assert.True(preset.HomeTheatreSettings.Bass.IsEnabled);
         Assert.True(preset.HomeTheatreSettings.Bass.BassGainDb >= 4.0f);
-        Assert.True(preset.HomeTheatreSettings.Bass.LowPassFilterEnabled);
+        Assert.False(preset.HomeTheatreSettings.Bass.LowPassFilterEnabled);
     }
 
     [Fact]
