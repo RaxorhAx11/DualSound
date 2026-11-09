@@ -63,9 +63,19 @@ public sealed record AudioDeviceInfo
     public bool IsDefaultPlayback { get; init; }
 
     /// <summary>
+    /// Indicates whether this device is currently the Windows default recording endpoint (Multimedia/Console).
+    /// </summary>
+    public bool IsDefaultRecording { get; init; }
+
+    /// <summary>
     /// Indicates whether this device is currently the Windows default communications endpoint.
     /// </summary>
     public bool IsDefaultCommunications { get; init; }
+
+    /// <summary>
+    /// Audio data flow direction (Render for playback, Capture for recording).
+    /// </summary>
+    public AudioDataFlow DataFlow { get; init; } = AudioDataFlow.Render;
 
     /// <summary>
     /// Number of audio channels (e.g. 2 for Stereo, 6 for 5.1 Surround, 8 for 7.1).

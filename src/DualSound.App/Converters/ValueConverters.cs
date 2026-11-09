@@ -80,6 +80,8 @@ public sealed class DeviceTypeToBrushConverter : IValueConverter
     private static readonly SolidColorBrush UsbBrush = new(Color.FromRgb(168, 85, 247));       // Purple 500
     private static readonly SolidColorBrush BluetoothBrush = new(Color.FromRgb(99, 102, 241)); // Indigo 500
     private static readonly SolidColorBrush VirtualBrush = new(Color.FromRgb(234, 179, 8));    // Yellow 500
+    private static readonly SolidColorBrush MicBrush = new(Color.FromRgb(16, 185, 129));        // Emerald 500
+    private static readonly SolidColorBrush LineInBrush = new(Color.FromRgb(245, 158, 11));     // Amber 500
     private static readonly SolidColorBrush UnknownBrush = new(Color.FromRgb(148, 163, 184));  // Slate 400
 
     static DeviceTypeToBrushConverter()
@@ -89,6 +91,8 @@ public sealed class DeviceTypeToBrushConverter : IValueConverter
         UsbBrush.Freeze();
         BluetoothBrush.Freeze();
         VirtualBrush.Freeze();
+        MicBrush.Freeze();
+        LineInBrush.Freeze();
         UnknownBrush.Freeze();
     }
 
@@ -103,6 +107,8 @@ public sealed class DeviceTypeToBrushConverter : IValueConverter
                 AudioDeviceType.UsbAudio => UsbBrush,
                 AudioDeviceType.BluetoothAudio => BluetoothBrush,
                 AudioDeviceType.VirtualAudio => VirtualBrush,
+                AudioDeviceType.Microphone => MicBrush,
+                AudioDeviceType.LineIn => LineInBrush,
                 _ => UnknownBrush
             };
         }

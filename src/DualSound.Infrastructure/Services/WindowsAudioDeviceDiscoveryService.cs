@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using DualSound.Audio;
+using DualSound.Contracts.Enums;
 using DualSound.Contracts.Models;
 using DualSound.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -56,7 +57,9 @@ public sealed class WindowsAudioDeviceDiscoveryService : IAudioDeviceDiscoverySe
                             device,
                             defaultPlaybackId,
                             defaultCommunicationsId,
-                            _logger);
+                            defaultRecordingId: null,
+                            dataFlow: AudioDataFlow.Render,
+                            logger: _logger);
 
                         results.Add(info);
                     }
@@ -85,6 +88,100 @@ public sealed class WindowsAudioDeviceDiscoveryService : IAudioDeviceDiscoverySe
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<AudioDeviceInfo>> GetRecordingDevicesAsync(bool includeInactive = true, CancellationToken cancellationToken = default)
+    {
+        return await Task.Run(() =>
+        {
+            var results = new List<AudioDeviceInfo>();
+
+            try
+            {
+                using var enumerator = new MMDeviceEnumerator();
+                var stateMask = includeInactive ? DeviceState.All : DeviceState.Active;
+
+                var defaultRecordingId = TryGetDefaultCaptureDeviceId(enumerator, Role.Multimedia) ??
+                                         TryGetDefaultCaptureDeviceId(enumerator, Role.Console);
+                var defaultCommunicationsId = TryGetDefaultCaptureDeviceId(enumerator, Role.Communications);
+
+                var deviceCollection = enumerator.EnumerateAudioEndPoints(DataFlow.Capture, stateMask);
+
+                foreach (var device in deviceCollection)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    try
+                    {
+                        var info = AudioDeviceMapper.MapToDeviceInfo(
+                            device,
+                            defaultPlaybackId: null,
+                            defaultCommunicationsId: defaultCommunicationsId,
+                            defaultRecordingId: defaultRecordingId,
+                            dataFlow: AudioDataFlow.Capture,
+                            logger: _logger);
+
+                        results.Add(info);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to map recording endpoint {DeviceId}", device.ID);
+                    }
+                }
+
+                _logger.LogInformation("Enumerated {Count} Windows recording endpoints (includeInactive={IncludeInactive})",
+                    results.Count, includeInactive);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to enumerate Windows recording endpoints");
+                throw;
+            }
+
+            return results
+                .OrderByDescending(d => d.IsDefaultRecording)
+                .ThenByDescending(d => d.IsActive)
+                .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<AudioDeviceInfo?> GetDefaultRecordingDeviceAsync(CancellationToken cancellationToken = default)
+    {
+        return await Task.Run(() =>
+        {
+            try
+            {
+                using var enumerator = new MMDeviceEnumerator();
+                var defaultDevice = TryGetDefaultCaptureDevice(enumerator, Role.Multimedia) ??
+                                    TryGetDefaultCaptureDevice(enumerator, Role.Console);
+
+                if (defaultDevice == null)
+                {
+                    return null;
+                }
+
+                var defaultCommunicationsId = TryGetDefaultCaptureDeviceId(enumerator, Role.Communications);
+
+                return AudioDeviceMapper.MapToDeviceInfo(
+                    defaultDevice,
+                    defaultPlaybackId: null,
+                    defaultCommunicationsId: defaultCommunicationsId,
+                    defaultRecordingId: defaultDevice.ID,
+                    dataFlow: AudioDataFlow.Capture,
+                    logger: _logger);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error retrieving default recording endpoint");
+                return null;
+            }
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<AudioDeviceInfo?> GetDeviceByIdAsync(string deviceId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(deviceId))
@@ -106,7 +203,13 @@ public sealed class WindowsAudioDeviceDiscoveryService : IAudioDeviceDiscoverySe
                 var defaultPlaybackId = TryGetDefaultDeviceId(enumerator, Role.Multimedia);
                 var defaultCommunicationsId = TryGetDefaultDeviceId(enumerator, Role.Communications);
 
-                return AudioDeviceMapper.MapToDeviceInfo(device, defaultPlaybackId, defaultCommunicationsId, _logger);
+                return AudioDeviceMapper.MapToDeviceInfo(
+                    device,
+                    defaultPlaybackId,
+                    defaultCommunicationsId,
+                    defaultRecordingId: null,
+                    dataFlow: AudioDataFlow.Render,
+                    logger: _logger);
             }
             catch (COMException ex) when ((uint)ex.HResult == 0x80070490 || ex.HResult == unchecked((int)0x88890001))
             {
@@ -144,7 +247,9 @@ public sealed class WindowsAudioDeviceDiscoveryService : IAudioDeviceDiscoverySe
                     defaultDevice,
                     defaultDevice.ID,
                     defaultCommunicationsId,
-                    _logger);
+                    defaultRecordingId: null,
+                    dataFlow: AudioDataFlow.Render,
+                    logger: _logger);
             }
             catch (Exception ex)
             {
@@ -171,6 +276,31 @@ public sealed class WindowsAudioDeviceDiscoveryService : IAudioDeviceDiscoverySe
         try
         {
             var device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, role);
+            return device?.ID;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static MMDevice? TryGetDefaultCaptureDevice(MMDeviceEnumerator enumerator, Role role)
+    {
+        try
+        {
+            return enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, role);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? TryGetDefaultCaptureDeviceId(MMDeviceEnumerator enumerator, Role role)
+    {
+        try
+        {
+            var device = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, role);
             return device?.ID;
         }
         catch

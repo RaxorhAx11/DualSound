@@ -192,6 +192,12 @@
 
     <!-- Modern Dark ComboBoxItem Style -->
     <Style x:Key="ModernComboBoxItem" TargetType="ComboBoxItem">
+        <Style.Resources>
+            <Style TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=ComboBoxItem}}" />
+                <Setter Property="FontFamily" Value="Segoe UI, -apple-system, BlinkMacSystemFont, Roboto, sans-serif" />
+            </Style>
+        </Style.Resources>
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="Padding" Value="10,8" />
         <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}" />
@@ -241,6 +247,12 @@
 
     <!-- Modern Dark ComboBox -->
     <Style x:Key="ModernComboBox" TargetType="ComboBox">
+        <Style.Resources>
+            <Style TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=ComboBox}}" />
+                <Setter Property="FontFamily" Value="Segoe UI, -apple-system, BlinkMacSystemFont, Roboto, sans-serif" />
+            </Style>
+        </Style.Resources>
         <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}" />
         <Setter Property="Background" Value="{StaticResource BrushCardBackground}" />
         <Setter Property="BorderBrush" Value="{StaticResource BrushSurfaceBorder}" />

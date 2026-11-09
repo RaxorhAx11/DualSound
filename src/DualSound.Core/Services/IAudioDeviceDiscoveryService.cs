@@ -32,5 +32,20 @@ public interface IAudioDeviceDiscoveryService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>AudioDeviceInfo representing default playback device, or null if unavailable.</returns>
     Task<AudioDeviceInfo?> GetDefaultPlaybackDeviceAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Asynchronously enumerates all audio capture (recording / input) endpoints.
+    /// </summary>
+    /// <param name="includeInactive">If true, includes unplugged, disabled, and not-present recording devices.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Read-only list of discovered recording endpoints.</returns>
+    Task<IReadOnlyList<AudioDeviceInfo>> GetRecordingDevicesAsync(bool includeInactive = true, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Asynchronously retrieves the current Windows default recording endpoint.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>AudioDeviceInfo representing default recording device, or null if unavailable.</returns>
+    Task<AudioDeviceInfo?> GetDefaultRecordingDeviceAsync(CancellationToken cancellationToken = default);
 }
 

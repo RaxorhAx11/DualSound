@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using DualSound.App.Services;
 using DualSound.App.ViewModels;
+using DualSound.Audio.Capture;
 using DualSound.Core.Services;
 using DualSound.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,7 @@ public class ViewModelLifecycleTests
         services.AddSingleton<IAudioDeviceDiscoveryService, WindowsAudioDeviceDiscoveryService>();
         services.AddSingleton<IAudioDeviceMonitorService, WindowsAudioDeviceMonitorService>();
         services.AddSingleton<INavigationService, NavigationService>();
+        services.AddSingleton<IAudioCapture, WasapiCaptureService>();
 
         services.AddSingleton<MainViewModel>();
         services.AddTransient<DashboardViewModel>();
@@ -150,6 +152,20 @@ public class ViewModelLifecycleTests
 
         devicesVm.SelectedFilter = "All";
         Assert.Equal(devicesVm.TotalDeviceCount, devicesVm.FilteredDevices.Count);
+    }
+
+    [Fact]
+    public async Task AudioRoutingViewModel_PopulatesRecordingDevicesAndHandlesCommands()
+    {
+        var routingVm = _serviceProvider.GetRequiredService<AudioRoutingViewModel>();
+        await routingVm.RefreshRecordingDevicesAsync();
+
+        Assert.NotNull(routingVm.AvailableRecordingDevices);
+        Assert.NotEmpty(routingVm.AvailableRecordingDevices);
+        Assert.NotNull(routingVm.SelectedRecordingDevice);
+        Assert.Equal("Ready", routingVm.CaptureStatusText);
+        Assert.True(routingVm.CanStartCapture);
+        Assert.False(routingVm.CanStopCapture);
     }
 
     private sealed class TestDispatcherService : IDispatcherService

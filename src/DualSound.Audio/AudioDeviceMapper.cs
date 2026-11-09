@@ -16,6 +16,8 @@ public static class AudioDeviceMapper
         MMDevice device,
         string? defaultPlaybackId,
         string? defaultCommunicationsId,
+        string? defaultRecordingId = null,
+        AudioDataFlow dataFlow = AudioDataFlow.Render,
         ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(device);
@@ -57,6 +59,9 @@ public static class AudioDeviceMapper
         var isDefaultPlayback = !string.IsNullOrEmpty(defaultPlaybackId) &&
                                 string.Equals(id, defaultPlaybackId, StringComparison.OrdinalIgnoreCase);
 
+        var isDefaultRecording = !string.IsNullOrEmpty(defaultRecordingId) &&
+                                 string.Equals(id, defaultRecordingId, StringComparison.OrdinalIgnoreCase);
+
         var isDefaultCommunications = !string.IsNullOrEmpty(defaultCommunicationsId) &&
                                       string.Equals(id, defaultCommunicationsId, StringComparison.OrdinalIgnoreCase);
 
@@ -75,7 +80,9 @@ public static class AudioDeviceMapper
             InstanceId = instanceId,
             InterfacePath = interfacePath,
             IsDefaultPlayback = isDefaultPlayback,
+            IsDefaultRecording = isDefaultRecording,
             IsDefaultCommunications = isDefaultCommunications,
+            DataFlow = dataFlow,
             Channels = channels,
             SampleRate = sampleRate,
             BitsPerSample = bitsPerSample

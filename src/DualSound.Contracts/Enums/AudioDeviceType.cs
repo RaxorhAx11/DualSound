@@ -43,6 +43,16 @@ public enum AudioDeviceType
     /// <summary>
     /// Virtual / Software audio endpoint (e.g. VB-Audio Cable, SteelSeries Sonar, Voicemeeter).
     /// </summary>
-    VirtualAudio = 7
+    VirtualAudio = 7,
+
+    /// <summary>
+    /// Microphone or built-in microphone array recording endpoint.
+    /// </summary>
+    Microphone = 8,
+
+    /// <summary>
+    /// 3.5 mm or analog line-in recording endpoint.
+    /// </summary>
+    LineIn = 9
 }
 

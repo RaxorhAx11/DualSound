@@ -45,6 +45,11 @@ public sealed class AppSettings
     public string? PreferredSecondaryDeviceId { get; set; }
 
     /// <summary>
+    /// Preferred capture / recording device ID (e.g. VB-Audio CABLE Output or Microphone).
+    /// </summary>
+    public string? PreferredCaptureDeviceId { get; set; }
+
+    /// <summary>
     /// User favorite device IDs for quick routing access.
     /// </summary>
     public List<string> FavoriteDeviceIds { get; set; } = [];

@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using DualSound.App.Services;
 using DualSound.App.ViewModels;
+using DualSound.Audio.Capture;
 using DualSound.Core.Services;
 using DualSound.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -89,6 +90,9 @@ public partial class App : Application
         services.AddSingleton<IAudioDeviceMonitorService, WindowsAudioDeviceMonitorService>();
         services.AddSingleton<INavigationService, NavigationService>();
 
+        // Audio Engine & Capture
+        services.AddSingleton<IAudioCapture, WasapiCaptureService>();
+
         // ViewModels
         services.AddSingleton<MainViewModel>();
         services.AddTransient<DashboardViewModel>();
@@ -108,7 +112,10 @@ public partial class App : Application
         {
             try
             {
-                // Ensure audio monitor resources are cleanly disposed
+                // Ensure audio capture and monitor resources are cleanly disposed
+                var captureEngine = _host.Services.GetService<IAudioCapture>();
+                captureEngine?.Dispose();
+
                 var monitorService = _host.Services.GetService<IAudioDeviceMonitorService>();
                 monitorService?.Dispose();
 

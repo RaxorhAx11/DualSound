@@ -127,7 +127,23 @@ public static class AudioDeviceClassifier
             }
         }
 
-        // 6. Generic Form Factor Fallback if bus is known
+        // 6. Microphones & Recording Form Factors
+        if (formFactor == EndpointFormFactor_Microphone)
+        {
+            if (bus is "USB" or "USBAUDIO" || instance.Contains(@"\USB\"))
+            {
+                return (AudioDeviceType.UsbAudio, "USB Microphone");
+            }
+
+            if (bus == "HDAUDIO" || instance.Contains(@"HDAUDIO\"))
+            {
+                return (AudioDeviceType.Microphone, "Built-in / Analog Microphone");
+            }
+
+            return (AudioDeviceType.Microphone, "Microphone");
+        }
+
+        // 7. Generic Form Factor Fallback if bus is known
         if (formFactor == EndpointFormFactor_Headphones)
         {
             return (AudioDeviceType.Headphones, "Headphones (Analog)");
@@ -143,7 +159,7 @@ public static class AudioDeviceClassifier
             return (AudioDeviceType.Speakers, "Speakers");
         }
 
-        // 7. Unknown Connection Type
+        // 8. Unknown Connection Type
         // If the hardware endpoint properties cannot be verified with certainty,
         // we must never make blind guesses or hardcode.
         return (AudioDeviceType.Unknown, "Unknown connection type");
