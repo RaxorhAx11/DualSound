@@ -119,3 +119,4 @@ public class AudioDeviceClassifierTests
         Assert.Equal("USB Audio (Headphones)", desc);
     }
 }
+

@@ -126,3 +126,4 @@ public sealed record AudioDeviceInfo
     /// </summary>
     public bool IsActive => State == AudioDeviceState.Active;
 }
+

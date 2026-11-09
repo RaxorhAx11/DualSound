@@ -146,3 +146,4 @@ public sealed partial class DashboardViewModel : ViewModelBase
         _navigationService.NavigateTo<AudioRoutingViewModel>();
     }
 }
+

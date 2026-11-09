@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using DualSound.App.Services;
 using DualSound.App.ViewModels;

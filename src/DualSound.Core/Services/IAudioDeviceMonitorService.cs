@@ -28,3 +28,4 @@ public interface IAudioDeviceMonitorService : IDisposable
     /// </summary>
     bool IsMonitoring { get; }
 }
+

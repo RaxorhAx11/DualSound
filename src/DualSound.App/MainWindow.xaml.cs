@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using DualSound.App.ViewModels;
 
 namespace DualSound.App;

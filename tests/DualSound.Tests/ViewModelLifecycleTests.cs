@@ -106,3 +106,4 @@ public class ViewModelLifecycleTests
         public Task<T> InvokeAsync<T>(Func<T> func) => Task.FromResult(func());
     }
 }
+

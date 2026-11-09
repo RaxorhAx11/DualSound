@@ -36,3 +36,4 @@ public interface ISettingsService
     /// </summary>
     Task SaveSettingsAsync(AppSettings settings, CancellationToken cancellationToken = default);
 }
+

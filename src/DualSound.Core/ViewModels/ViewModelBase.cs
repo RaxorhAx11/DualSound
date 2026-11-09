@@ -57,3 +57,4 @@ public abstract partial class ViewModelBase : ObservableObject, IDisposable
         }
     }
 }
+

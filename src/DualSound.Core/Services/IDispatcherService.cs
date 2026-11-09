@@ -23,3 +23,4 @@ public interface IDispatcherService
     /// </summary>
     Task<T> InvokeAsync<T>(Func<T> func);
 }
+

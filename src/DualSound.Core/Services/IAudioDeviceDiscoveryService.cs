@@ -33,3 +33,4 @@ public interface IAudioDeviceDiscoveryService
     /// <returns>AudioDeviceInfo representing default playback device, or null if unavailable.</returns>
     Task<AudioDeviceInfo?> GetDefaultPlaybackDeviceAsync(CancellationToken cancellationToken = default);
 }
+

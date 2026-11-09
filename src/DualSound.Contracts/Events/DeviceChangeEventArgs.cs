@@ -77,3 +77,4 @@ public sealed class DeviceChangeEventArgs : EventArgs
     /// </summary>
     public DateTime TimestampUtc { get; }
 }
+

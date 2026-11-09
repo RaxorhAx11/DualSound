@@ -29,3 +29,4 @@ public static class WindowsAudioPropertyKeys
     // Device Interface Path: {233164c8-1b2c-4c7d-bc68-b671687a2567}, 1
     public static readonly PropertyKey InterfacePath = new(new Guid("233164c8-1b2c-4c7d-bc68-b671687a2567"), 1);
 }
+

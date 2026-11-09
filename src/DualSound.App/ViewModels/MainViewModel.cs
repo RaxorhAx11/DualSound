@@ -143,3 +143,4 @@ public sealed partial class MainViewModel : ViewModelBase
         base.Dispose(disposing);
     }
 }
+

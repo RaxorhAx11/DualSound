@@ -30,3 +30,4 @@ public class AudioDeviceMonitorServiceTests
         Assert.False(monitor.IsMonitoring);
     }
 }
+

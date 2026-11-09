@@ -59,3 +59,4 @@ public sealed class AppSettings
     /// </summary>
     public string MinimumLogLevel { get; set; } = "Information";
 }
+

@@ -50,3 +50,4 @@ public sealed class WpfDispatcherService : IDispatcherService
         return await Application.Current.Dispatcher.InvokeAsync(func);
     }
 }
+

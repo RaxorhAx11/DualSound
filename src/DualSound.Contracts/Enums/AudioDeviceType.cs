@@ -45,3 +45,4 @@ public enum AudioDeviceType
     /// </summary>
     VirtualAudio = 7
 }
+

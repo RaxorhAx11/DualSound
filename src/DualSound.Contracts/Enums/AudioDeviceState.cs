@@ -31,3 +31,4 @@ public enum AudioDeviceState
     /// </summary>
     All = Active | Disabled | NotPresent | Unplugged
 }
+

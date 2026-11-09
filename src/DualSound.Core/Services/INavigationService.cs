@@ -30,3 +30,4 @@ public interface INavigationService
     /// <param name="viewModelType">ViewModel type to display.</param>
     void NavigateTo(Type viewModelType);
 }
+

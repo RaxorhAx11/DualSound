@@ -24,3 +24,4 @@ public class MMDeviceNotificationClientFunctionalTest
         Assert.False(eventHooked);
     }
 }
+
