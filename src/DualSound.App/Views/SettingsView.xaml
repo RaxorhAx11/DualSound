@@ -6,137 +6,174 @@
              xmlns:vm="clr-namespace:DualSound.App.ViewModels"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance vm:SettingsViewModel}"
-             d:DesignHeight="700" d:DesignWidth="900">
+             d:DesignHeight="700" d:DesignWidth="1020">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="28,24" MaxWidth="850" HorizontalAlignment="Left">
+    <Grid Margin="24,18" VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-            <!-- Title & Subtitle -->
-            <TextBlock Text="Application Settings" FontSize="22" FontWeight="Bold" Margin="0,0,0,4" />
-            <TextBlock Text="Manage local application preferences, device detection behavior, and storage" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,24" />
+        <!-- 1. Header Section -->
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-            <!-- Success / Confirmation Banner -->
-            <Border Background="{StaticResource BrushSuccessBg}" BorderBrush="{StaticResource BrushSuccess}" BorderThickness="1" CornerRadius="6" Padding="14,10" Margin="0,0,0,20"
-                    Visibility="{Binding SaveMessage, Converter={StaticResource StringToVis}}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Path Grid.Column="0" Data="{StaticResource IconCheck}" Fill="{StaticResource BrushSuccess}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="{Binding SaveMessage}" Foreground="#A7F3D0" FontWeight="Medium" FontSize="13" VerticalAlignment="Center" />
-                </Grid>
-            </Border>
-
-            <!-- Error Banner -->
-            <Border Background="{StaticResource BrushDangerBg}" BorderBrush="{StaticResource BrushDanger}" BorderThickness="1" CornerRadius="6" Padding="14,10" Margin="0,0,0,20"
-                    Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVis}}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Path Grid.Column="0" Data="{StaticResource IconWarning}" Fill="{StaticResource BrushDanger}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="{Binding ErrorMessage}" Foreground="#FECACA" FontWeight="Medium" FontSize="13" VerticalAlignment="Center" />
-                </Grid>
-            </Border>
-
-            <!-- Device Enumeration & Discovery Section -->
-            <TextBlock Text="AUDIO ENDPOINT DISCOVERY" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,10" />
-            <Border Style="{StaticResource CardPanel}" Margin="0,0,0,24">
-                <StackPanel>
-                    <!-- Auto-refresh Toggle -->
-                    <Grid Margin="0,0,0,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Live Device Detection" FontWeight="SemiBold" FontSize="14" />
-                            <TextBlock Text="Automatically detect newly connected or unplugged audio endpoints in real time" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" />
-                        </StackPanel>
-                        <CheckBox Grid.Column="1" Style="{StaticResource ModernCheckBox}" IsChecked="{Binding AutoRefreshDevices}" VerticalAlignment="Center" />
-                    </Grid>
-
-                    <Separator Background="{StaticResource BrushSurfaceBorderSubtle}" Margin="0,0,0,16" />
-
-                    <!-- Show Disconnected Devices -->
-                    <Grid Margin="0,0,0,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Show Disconnected &amp; Unplugged Endpoints" FontWeight="SemiBold" FontSize="14" />
-                            <TextBlock Text="Display 3.5mm jacks and USB devices that are currently unplugged or not present" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" />
-                        </StackPanel>
-                        <CheckBox Grid.Column="1" Style="{StaticResource ModernCheckBox}" IsChecked="{Binding ShowDisconnectedDevices}" VerticalAlignment="Center" />
-                    </Grid>
-
-                    <Separator Background="{StaticResource BrushSurfaceBorderSubtle}" Margin="0,0,0,16" />
-
-                    <!-- Show Disabled Devices -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Show Disabled Endpoints" FontWeight="SemiBold" FontSize="14" />
-                            <TextBlock Text="Include endpoints that have been disabled in Windows Sound Settings" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" />
-                        </StackPanel>
-                        <CheckBox Grid.Column="1" Style="{StaticResource ModernCheckBox}" IsChecked="{Binding ShowDisabledDevices}" VerticalAlignment="Center" />
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <!-- Storage & Offline Mode Section -->
-            <TextBlock Text="OFFLINE STORAGE &amp; PRIVACY" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,10" />
-            <Border Style="{StaticResource CardPanel}" Margin="0,0,0,24">
-                <StackPanel>
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Local Configuration File" FontWeight="SemiBold" FontSize="14" />
-                            <TextBlock Text="Settings are stored locally as JSON in your Windows AppData directory" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" />
-                        </StackPanel>
-                        <Button Grid.Column="1" Style="{StaticResource OutlineButton}" Command="{Binding OpenSettingsFolderCommand}" Content="Open Folder" VerticalAlignment="Center" />
-                    </Grid>
-
-                    <TextBox Style="{StaticResource ModernTextBox}" Text="{Binding SettingsFilePath, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="11" Margin="0,0,0,12" />
-
-                    <!-- Offline Guarantee Card -->
-                    <Border Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="14,12" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Path Grid.Column="0" Data="{StaticResource IconOffline}" Fill="{StaticResource BrushSuccess}" Width="20" Height="20" Stretch="Uniform" Margin="0,0,12,0" VerticalAlignment="Top" />
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="Strictly Offline Architecture" FontWeight="Bold" FontSize="13" Foreground="{StaticResource BrushSuccess}" />
-                                <TextBlock Text="DualSound never initiates internet connections or sends telemetry. In accordance with audio processing standards, temporary audio buffers are never saved to disk."
-                                           FontSize="12" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,4,0,0" LineHeight="18" />
-                            </StackPanel>
-                        </Grid>
+            <StackPanel Grid.Column="0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Application Settings" FontSize="22" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" />
+                    <Border Background="{StaticResource BrushAccentMuted}" CornerRadius="12" Padding="10,3" Margin="14,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="OFFLINE CONFIGURATION" Foreground="#93C5FD" FontSize="11" FontWeight="Bold" />
                     </Border>
                 </StackPanel>
-            </Border>
-
-            <!-- Bottom Save / Reset Actions -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,20">
-                <Button Style="{StaticResource PrimaryButton}" Command="{Binding SaveSettingsCommand}" Margin="0,0,12,0">
-                    <TextBlock Text="Save Preferences" />
-                </Button>
-                <Button Style="{StaticResource OutlineButton}" Command="{Binding ResetToDefaultsCommand}">
-                    <TextBlock Text="Reset Defaults" />
-                </Button>
+                <TextBlock Text="Manage audio engine preferences, startup behavior, and local JSON storage" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" />
             </StackPanel>
 
-        </StackPanel>
-    </ScrollViewer>
-</UserControl>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource OutlineButton}" Command="{Binding ResetToDefaultsCommand}" Height="34" Padding="14,0" Margin="0,0,8,0">
+                    <TextBlock Text="Restore Defaults" />
+                </Button>
+                <Button Style="{StaticResource PrimaryButton}" Command="{Binding SaveSettingsCommand}" Height="34" Padding="16,0">
+                    <TextBlock Text="Save Preferences" />
+                </Button>
+            </StackPanel>
+        </Grid>
 
+        <!-- Notification Banner -->
+        <Border Grid.Row="1" Background="{StaticResource BrushSuccessBg}" BorderBrush="{StaticResource BrushSuccess}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,12"
+                Visibility="{Binding SaveMessage, Converter={StaticResource StringToVis}}">
+            <TextBlock Text="{Binding SaveMessage}" Foreground="#A7F3D0" FontSize="12" FontWeight="Medium" />
+        </Border>
+
+        <!-- 2. Settings Content Grid -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <Grid Margin="0,0,6,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left Column: Audio Engine & Startup -->
+                <StackPanel Grid.Column="0">
+                    <!-- Card 1: Audio Engine & DSP Performance -->
+                    <Border Style="{StaticResource CardPanel}" Padding="18,16" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="AUDIO ENGINE &amp; DSP" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,12" />
+
+                            <!-- Sample Rate -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="120" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Internal Processing Rate" FontSize="13" FontWeight="SemiBold" />
+                                    <TextBlock Text="Canonical 48 kHz preferred for cinema" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1" Style="{StaticResource ModernComboBox}"
+                                          ItemsSource="{Binding AvailableSampleRates}"
+                                          SelectedItem="{Binding TargetSampleRate, Mode=TwoWay}"
+                                          Height="30" />
+                            </Grid>
+
+                            <!-- Buffer Latency Target -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid Grid.Row="0" Margin="0,0,0,6">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="WASAPI Buffer Latency Target" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="(Lower = less delay; Higher = stability)" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="6,0,0,0" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding BufferLatencyMs, StringFormat={}{0} ms}" FontSize="13" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" HorizontalAlignment="Right" />
+                                </Grid>
+                                <Slider Grid.Row="1" Minimum="20" Maximum="100" Value="{Binding BufferLatencyMs, Mode=TwoWay}" SmallChange="5" LargeChange="10" />
+                            </Grid>
+
+                            <!-- Auto Restart on Device Loss -->
+                            <CheckBox Content="Auto-recover when HDMI display or 3.5 mm jack reconnects"
+                                      IsChecked="{Binding AutoRestartOnDeviceLoss, Mode=TwoWay}"
+                                      Style="{StaticResource ModernCheckBox}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Card 2: Startup Behavior -->
+                    <Border Style="{StaticResource CardPanel}" Padding="18,16">
+                        <StackPanel>
+                            <TextBlock Text="APPLICATION STARTUP" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,12" />
+
+                            <CheckBox Content="Automatically start dual audio engine on application launch"
+                                      IsChecked="{Binding AutoStartEngine, Mode=TwoWay}"
+                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10" />
+
+                            <CheckBox Content="Start minimized to Windows taskbar"
+                                      IsChecked="{Binding StartMinimized, Mode=TwoWay}"
+                                      Style="{StaticResource ModernCheckBox}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Right Column: Hardware Discovery & Local Storage -->
+                <StackPanel Grid.Column="2">
+                    <!-- Card 3: Windows Device Discovery -->
+                    <Border Style="{StaticResource CardPanel}" Padding="18,16" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="DEVICE DISCOVERY &amp; MONITORING" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,12" />
+
+                            <CheckBox Content="Real-time CoreAudio plug and play monitoring"
+                                      IsChecked="{Binding AutoRefreshDevices, Mode=TwoWay}"
+                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10" />
+
+                            <CheckBox Content="Display disconnected or unplugged hardware endpoints"
+                                      IsChecked="{Binding ShowDisconnectedDevices, Mode=TwoWay}"
+                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10" />
+
+                            <CheckBox Content="Display disabled Windows audio endpoints"
+                                      IsChecked="{Binding ShowDisabledDevices, Mode=TwoWay}"
+                                      Style="{StaticResource ModernCheckBox}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Card 4: Local Storage & Diagnostics -->
+                    <Border Style="{StaticResource CardPanel}" Padding="18,16">
+                        <StackPanel>
+                            <TextBlock Text="LOCAL STORAGE &amp; DIAGNOSTICS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,12" />
+
+                            <!-- Diagnostic Log Level -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="120" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Minimum Log Level" FontSize="13" FontWeight="SemiBold" />
+                                    <TextBlock Text="Stored offline in LocalAppData" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1" Style="{StaticResource ModernComboBox}"
+                                          ItemsSource="{Binding AvailableLogLevels}"
+                                          SelectedItem="{Binding MinimumLogLevel, Mode=TwoWay}"
+                                          Height="30" />
+                            </Grid>
+
+                            <!-- Settings File Location -->
+                            <TextBlock Text="CONFIG FILE PATH" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3" />
+                            <TextBlock Text="{Binding SettingsFilePath}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextTrimming="CharacterEllipsis" Margin="0,0,0,8" />
+
+                            <Button Style="{StaticResource OutlineButton}" Command="{Binding OpenSettingsDirectoryCommand}" Height="30" Padding="12,0" HorizontalAlignment="Left">
+                                <TextBlock Text="Open Config Folder" />
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+            </Grid>
+        </ScrollViewer>
+
+    </Grid>
+</UserControl>

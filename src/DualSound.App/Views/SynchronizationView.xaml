@@ -6,39 +6,277 @@
              xmlns:vm="clr-namespace:DualSound.App.ViewModels"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance vm:SynchronizationViewModel}"
-             d:DesignHeight="600" d:DesignWidth="800">
+             d:DesignHeight="700" d:DesignWidth="1020">
 
-    <Grid HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="600">
-        <Border Style="{StaticResource CardPanel}" Padding="36,32">
-            <StackPanel HorizontalAlignment="Center">
-                <!-- Icon -->
-                <Border Background="#14532D" CornerRadius="12" Width="64" Height="64" HorizontalAlignment="Center" Margin="0,0,0,16">
-                    <Path Data="{StaticResource IconSync}" Fill="{StaticResource BrushSuccess}" Width="32" Height="32" Stretch="Uniform" />
-                </Border>
+    <Grid Margin="24,18" VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-                <!-- Coming Soon Badge -->
-                <Border Background="#064E3B" CornerRadius="4" Padding="10,4" HorizontalAlignment="Center" Margin="0,0,0,12">
-                    <TextBlock Text="COMING SOON • MILESTONE 04" Foreground="#A7F3D0" FontSize="11" FontWeight="Bold" />
-                </Border>
+        <!-- 1. Header with Reset Action -->
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-                <!-- Title -->
-                <TextBlock Text="{Binding FeatureName}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,12" />
-
-                <!-- Description -->
-                <TextBlock Text="{Binding MilestoneDescription}" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextAlignment="Center" LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,20" />
-
-                <!-- Target Roadmap Box -->
-                <Border Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="16,12" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock Text="Planned Latency Sync Capabilities:" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,6" />
-                        <TextBlock Text="• Independent millisecond delay buffers for HDMI vs 3.5mm outputs" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
-                        <TextBlock Text="• Elimination of comb filtering and echo between adjacent rooms" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
-                        <TextBlock Text="• Interactive sync test chirp and visual delay calibration guide" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
-                        <TextBlock Text="• High-precision ring buffer implementation with sample interpolation" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
-                    </StackPanel>
-                </Border>
+            <StackPanel Grid.Column="0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Audio Delay &amp; Synchronization" FontSize="22" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" />
+                    <Border Background="{StaticResource BrushAccentMuted}" CornerRadius="12" Padding="10,3" Margin="14,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="MILLISECOND PRECISION" Foreground="#93C5FD" FontSize="11" FontWeight="Bold" />
+                    </Border>
+                </StackPanel>
+                <TextBlock Text="Eliminate echo and acoustic phasing between HDMI video display and 3.5 mm home theatre" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" />
             </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource OutlineButton}" Command="{Binding ResetSyncCommand}" Height="34" Padding="14,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource IconRefresh}" Fill="{StaticResource BrushTextPrimary}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Reset Delays (0 ms)" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Notification Banner -->
+        <Border Grid.Row="1" Background="{StaticResource BrushAccentMuted}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,12"
+                Visibility="{Binding NotificationMessage, Converter={StaticResource StringToVis}}">
+            <TextBlock Text="{Binding NotificationMessage}" Foreground="#BFDBFE" FontSize="12" FontWeight="Medium" />
         </Border>
+
+        <!-- 2. Dual Delay Line Sliders Card -->
+        <Border Grid.Row="2" Style="{StaticResource CardPanel}" Padding="20,16" Margin="0,0,0,14">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="14" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="14" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="INDEPENDENT OUTPUT DELAYS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" />
+                    <Border Grid.Column="1" Background="{StaticResource BrushCardBackgroundHover}" BorderBrush="{StaticResource BrushSurfaceBorder}" BorderThickness="1" CornerRadius="6" Padding="10,4">
+                        <TextBlock Text="{Binding DelayDeltaText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushAccent}" />
+                    </Border>
+                </Grid>
+
+                <!-- TV / HDMI Delay Slider -->
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="TV / HDMI Output Delay" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" />
+                            <TextBlock Text="(Usually 0-30 ms to sync with TV video processing)" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding TvDelayMs, StringFormat={}{0:F0} ms}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource BrushHdmi}" HorizontalAlignment="Right" />
+                    </Grid>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="-20" Command="{Binding AdjustTvDelayCommand}" CommandParameter="-20" Style="{StaticResource OutlineButton}" Height="28" Padding="8,0" Margin="0,0,4,0" />
+                        <Button Grid.Column="1" Content="-5" Command="{Binding AdjustTvDelayCommand}" CommandParameter="-5" Style="{StaticResource OutlineButton}" Height="28" Padding="8,0" Margin="0,0,10,0" />
+
+                        <Slider Grid.Column="2" Minimum="0" Maximum="500" Value="{Binding TvDelayMs, Mode=TwoWay}" VerticalAlignment="Center" SmallChange="1" LargeChange="10" />
+
+                        <Button Grid.Column="3" Content="+5" Command="{Binding AdjustTvDelayCommand}" CommandParameter="5" Style="{StaticResource OutlineButton}" Height="28" Padding="8,0" Margin="10,0,4,0" />
+                        <Button Grid.Column="4" Content="+20" Command="{Binding AdjustTvDelayCommand}" CommandParameter="20" Style="{StaticResource OutlineButton}" Height="28" Padding="8,0" />
+                    </Grid>
+                </Grid>
+
+                <Separator Grid.Row="2" Background="{StaticResource BrushSurfaceBorderSubtle}" />
+
+                <!-- Home Theatre Delay Slider -->
+                <Grid Grid.Row="3">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Home Theatre / 3.5 mm Delay" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" />
+                            <TextBlock Text="(Compensates for TV display lag or physical acoustic distance)" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding HomeTheatreDelayMs, StringFormat={}{0:F0} ms}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource BrushAnalog}" HorizontalAlignment="Right" />
+                    </Grid>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="-20" Command="{Binding AdjustHomeTheatreDelayCommand}" CommandParameter="-20" Style="{StaticResource OutlineButton}" Height="28" Padding="8,0" Margin="0,0,4,0" />
+                        <Button Grid.Column="1" Content="-5" Command="{Binding AdjustHomeTheatreDelayCommand}" CommandParameter="-5" Style="{StaticResource OutlineButton}" Height="28" Padding="8,0" Margin="0,0,10,0" />
+
+                        <Slider Grid.Column="2" Minimum="0" Maximum="500" Value="{Binding HomeTheatreDelayMs, Mode=TwoWay}" VerticalAlignment="Center" SmallChange="1" LargeChange="10" />
+
+                        <Button Grid.Column="3" Content="+5" Command="{Binding AdjustHomeTheatreDelayCommand}" CommandParameter="5" Style="{StaticResource OutlineButton}" Height="28" Padding="8,0" Margin="10,0,4,0" />
+                        <Button Grid.Column="4" Content="+20" Command="{Binding AdjustHomeTheatreDelayCommand}" CommandParameter="20" Style="{StaticResource OutlineButton}" Height="28" Padding="8,0" />
+                    </Grid>
+                </Grid>
+
+            </Grid>
+        </Border>
+
+        <!-- 3. Real-Time Buffer Health & Telemetry Cards -->
+        <Grid Grid.Row="3" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- TV Sync Telemetry -->
+            <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="18,14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Text="TV (HDMI) BUFFER HEALTH" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                        <Border HorizontalAlignment="Right" Background="{StaticResource BrushCardBackgroundHover}" CornerRadius="4" Padding="6,2">
+                            <TextBlock Text="{Binding TvHealthStatus}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushHdmi}" />
+                        </Border>
+                    </Grid>
+
+                    <!-- Buffer Occupancy Bar -->
+                    <StackPanel Grid.Row="1" Margin="0,0,0,10">
+                        <Grid Margin="0,0,0,4">
+                            <TextBlock Text="Delay Ring Buffer Occupancy" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                            <TextBlock Text="{Binding FormattedTvOccupancy}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Right" Foreground="{StaticResource BrushTextPrimary}" />
+                        </Grid>
+                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding TvOccupancyPercent}" Height="6" Background="#0F172A" Foreground="{StaticResource BrushHdmi}" BorderThickness="0" />
+                    </StackPanel>
+
+                    <!-- Timing Grid -->
+                    <Grid Grid.Row="2" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="ESTIMATED LATENCY" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding TvEstimatedLatencyMs, StringFormat={}{0:F0} ms}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="CLOCK DRIFT" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding TvDriftSamples, StringFormat={}{0} samples}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Error Metrics -->
+                    <Grid Grid.Row="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="UNDERRUNS" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding TvUnderrunCount}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="OVERRUNS" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding TvOverrunCount}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Home Theatre Sync Telemetry -->
+            <Border Grid.Column="2" Style="{StaticResource CardPanel}" Padding="18,14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Text="HOME THEATRE (3.5 MM) BUFFER HEALTH" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                        <Border HorizontalAlignment="Right" Background="{StaticResource BrushCardBackgroundHover}" CornerRadius="4" Padding="6,2">
+                            <TextBlock Text="{Binding HomeTheatreHealthStatus}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushAnalog}" />
+                        </Border>
+                    </Grid>
+
+                    <!-- Buffer Occupancy Bar -->
+                    <StackPanel Grid.Row="1" Margin="0,0,0,10">
+                        <Grid Margin="0,0,0,4">
+                            <TextBlock Text="Delay Ring Buffer Occupancy" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                            <TextBlock Text="{Binding FormattedHomeTheatreOccupancy}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Right" Foreground="{StaticResource BrushTextPrimary}" />
+                        </Grid>
+                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding HomeTheatreOccupancyPercent}" Height="6" Background="#0F172A" Foreground="{StaticResource BrushAnalog}" BorderThickness="0" />
+                    </StackPanel>
+
+                    <!-- Timing Grid -->
+                    <Grid Grid.Row="2" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="ESTIMATED LATENCY" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding HomeTheatreEstimatedLatencyMs, StringFormat={}{0:F0} ms}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="CLOCK DRIFT" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding HomeTheatreDriftSamples, StringFormat={}{0} samples}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Error Metrics -->
+                    <Grid Grid.Row="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="UNDERRUNS" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding HomeTheatreUnderrunCount}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="OVERRUNS" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="{Binding HomeTheatreOverrunCount}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 4. Acoustic Distinctions Note Footer -->
+        <Border Grid.Row="4" Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="14,10" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
+            <TextBlock Text="Note: Estimated software latency represents audio driver buffering and internal delay buffers. Physical acoustic delay depends on speaker distances (sound travels ~34.3 cm per millisecond in air)." FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" />
+        </Border>
+
     </Grid>
 </UserControl>
-

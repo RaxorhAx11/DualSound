@@ -181,6 +181,7 @@
                 <Setter TargetName="arrow" Property="Fill" Value="{StaticResource BrushTextPrimary}" />
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="templateRoot" Property="Background" Value="{StaticResource BrushCardBackgroundHover}" />
                 <Setter TargetName="templateRoot" Property="BorderBrush" Value="{StaticResource BrushAccent}" />
                 <Setter TargetName="arrow" Property="Fill" Value="{StaticResource BrushAccent}" />
             </Trigger>

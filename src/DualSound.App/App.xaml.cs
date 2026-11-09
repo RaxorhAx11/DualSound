@@ -3,6 +3,10 @@ using System.Windows;
 using DualSound.App.Services;
 using DualSound.App.ViewModels;
 using DualSound.Audio.Capture;
+using DualSound.Audio.Engine;
+using DualSound.Audio.Output;
+using DualSound.Audio.Presets;
+using DualSound.Audio.Sync;
 using DualSound.Core.Services;
 using DualSound.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,6 +70,13 @@ public partial class App : Application
             MainWindow = mainWindow;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
+
+            // Auto-start engine if preferred in settings
+            if (settingsService.CurrentSettings.AutoStartEngine)
+            {
+                var engine = _host.Services.GetRequiredService<IAudioEngineService>();
+                _ = engine.StartAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -90,8 +101,12 @@ public partial class App : Application
         services.AddSingleton<IAudioDeviceMonitorService, WindowsAudioDeviceMonitorService>();
         services.AddSingleton<INavigationService, NavigationService>();
 
-        // Audio Engine & Capture
+        // Audio Engine, DSP, Sync & Dual Outputs
         services.AddSingleton<IAudioCapture, WasapiCaptureService>();
+        services.AddSingleton<IAudioSyncManager, AudioSyncManager>();
+        services.AddSingleton<IDualAudioOutputService, DualAudioOutputService>();
+        services.AddSingleton<IAudioPresetService, AudioPresetService>();
+        services.AddSingleton<IAudioEngineService, AudioEngineService>();
 
         // ViewModels
         services.AddSingleton<MainViewModel>();
@@ -112,7 +127,10 @@ public partial class App : Application
         {
             try
             {
-                // Ensure audio capture and monitor resources are cleanly disposed
+                // Ensure master audio engine, capture, and monitor resources are cleanly disposed
+                var audioEngine = _host.Services.GetService<IAudioEngineService>();
+                audioEngine?.Dispose();
+
                 var captureEngine = _host.Services.GetService<IAudioCapture>();
                 captureEngine?.Dispose();
 

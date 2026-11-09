@@ -280,7 +280,46 @@
                                  IsReadOnly="True"
                                  Style="{StaticResource ModernTextBox}"
                                  FontFamily="Consolas" FontSize="10"
-                                 Margin="0,3,0,0" />
+                                 Margin="0,3,0,14" />
+
+                        <!-- Quick Pipeline Assignment Actions -->
+                        <Separator Background="{StaticResource BrushSurfaceBorderSubtle}" Margin="0,0,0,14" />
+                        <TextBlock Text="ASSIGN TO DUALSOUND PIPELINE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" />
+
+                        <StackPanel Margin="0,0,0,6">
+                            <Button Style="{StaticResource OutlineButton}"
+                                    Command="{Binding AssignAsTvOutputCommand}"
+                                    Margin="0,0,0,8" Height="32">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse Width="7" Height="7" Fill="{StaticResource BrushHdmi}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="Assign as TV (HDMI) Output" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Style="{StaticResource OutlineButton}"
+                                    Command="{Binding AssignAsHomeTheatreOutputCommand}"
+                                    Margin="0,0,0,8" Height="32">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse Width="7" Height="7" Fill="{StaticResource BrushAnalog}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="Assign as Home Theatre (3.5 mm)" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Style="{StaticResource OutlineButton}"
+                                    Command="{Binding AssignAsCaptureSourceCommand}"
+                                    Height="32">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse Width="7" Height="7" Fill="{StaticResource BrushVirtual}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="Assign as Capture Source" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Assignment Feedback Banner -->
+                        <Border Background="{StaticResource BrushAccentMuted}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,8,0,0"
+                                Visibility="{Binding AssignmentFeedback, Converter={StaticResource StringToVis}}">
+                            <TextBlock Text="{Binding AssignmentFeedback}" Foreground="#93C5FD" FontSize="11" FontWeight="Medium" TextWrapping="Wrap" />
+                        </Border>
 
                     </StackPanel>
                 </ScrollViewer>

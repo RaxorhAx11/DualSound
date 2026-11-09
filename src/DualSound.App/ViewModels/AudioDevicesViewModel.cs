@@ -60,6 +60,9 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasNoDevices;
 
+    [ObservableProperty]
+    private string? _assignmentFeedback;
+
     public string[] DeviceFilters { get; } = ["All", "Active", "Disconnected", "Disabled"];
 
     public AudioDevicesViewModel(
@@ -193,6 +196,56 @@ public sealed partial class AudioDevicesViewModel : ViewModelBase
             _monitorService.StopMonitoring();
             StatusNotification = "Real-time plug and play monitoring disabled";
         }
+    }
+
+    public bool HasSelectedDevice => SelectedDevice != null;
+
+    partial void OnSelectedDeviceChanged(AudioDeviceInfo? value)
+    {
+        AssignmentFeedback = null;
+        AssignAsTvOutputCommand.NotifyCanExecuteChanged();
+        AssignAsHomeTheatreOutputCommand.NotifyCanExecuteChanged();
+        AssignAsCaptureSourceCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedDevice))]
+    public async Task AssignAsTvOutputAsync()
+    {
+        if (SelectedDevice == null) return;
+
+        var settings = _settingsService.CurrentSettings;
+        settings.TvBranch.DeviceId = SelectedDevice.Id;
+        settings.TvBranch.DeviceName = SelectedDevice.Name;
+        settings.PreferredPrimaryDeviceId = SelectedDevice.Id;
+
+        await _settingsService.SaveSettingsAsync(settings);
+        AssignmentFeedback = $"Assigned '{SelectedDevice.Name}' as TV (HDMI) Output";
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedDevice))]
+    public async Task AssignAsHomeTheatreOutputAsync()
+    {
+        if (SelectedDevice == null) return;
+
+        var settings = _settingsService.CurrentSettings;
+        settings.HomeTheatreBranch.DeviceId = SelectedDevice.Id;
+        settings.HomeTheatreBranch.DeviceName = SelectedDevice.Name;
+        settings.PreferredSecondaryDeviceId = SelectedDevice.Id;
+
+        await _settingsService.SaveSettingsAsync(settings);
+        AssignmentFeedback = $"Assigned '{SelectedDevice.Name}' as Home Theatre (3.5 mm) Output";
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedDevice))]
+    public async Task AssignAsCaptureSourceAsync()
+    {
+        if (SelectedDevice == null) return;
+
+        var settings = _settingsService.CurrentSettings;
+        settings.PreferredCaptureDeviceId = SelectedDevice.Id;
+
+        await _settingsService.SaveSettingsAsync(settings);
+        AssignmentFeedback = $"Assigned '{SelectedDevice.Name}' as Recording Capture Source";
     }
 
     partial void OnSearchQueryChanged(string value) => ApplyFilter();

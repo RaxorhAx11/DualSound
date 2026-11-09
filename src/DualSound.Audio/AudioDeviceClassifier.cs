@@ -97,7 +97,13 @@ public static class AudioDeviceClassifier
         if (formFactor == EndpointFormFactor_DigitalAudioDisplayDevice ||
             formFactor == EndpointFormFactor_SPDIF ||
             iface.Contains("HDMIOUT") ||
-            iface.Contains("DISPLAYPORT"))
+            iface.Contains("DISPLAYPORT") ||
+            adapter.Contains("AMD HIGH DEFINITION AUDIO") ||
+            adapter.Contains("NVIDIA HIGH DEFINITION AUDIO") ||
+            adapter.Contains("INTEL(R) DISPLAY AUDIO") ||
+            adapter.Contains("DISPLAY AUDIO") ||
+            instance.Contains(@"HDAUDIO\FUNC_01&VEN_1002") || // AMD GPU Audio
+            instance.Contains(@"HDAUDIO\FUNC_01&VEN_10DE"))   // NVIDIA GPU Audio
         {
             return (AudioDeviceType.HdmiDisplayPort, "HDMI / DisplayPort Audio");
         }

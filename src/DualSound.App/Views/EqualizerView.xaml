@@ -4,41 +4,346 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:vm="clr-namespace:DualSound.App.ViewModels"
+             xmlns:enums="clr-namespace:DualSound.Contracts.Enums;assembly=DualSound.Contracts"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance vm:EqualizerViewModel}"
-             d:DesignHeight="600" d:DesignWidth="800">
+             d:DesignHeight="720" d:DesignWidth="1020">
 
-    <Grid HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="600">
-        <Border Style="{StaticResource CardPanel}" Padding="36,32">
-            <StackPanel HorizontalAlignment="Center">
-                <!-- Icon -->
-                <Border Background="#581C87" CornerRadius="12" Width="64" Height="64" HorizontalAlignment="Center" Margin="0,0,0,16">
-                    <Path Data="{StaticResource IconEqualizer}" Fill="{StaticResource BrushUsb}" Width="32" Height="32" Stretch="Uniform" />
-                </Border>
+    <Grid Margin="24,18" VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-                <!-- Coming Soon Badge -->
-                <Border Background="#3B0764" CornerRadius="4" Padding="10,4" HorizontalAlignment="Center" Margin="0,0,0,12">
-                    <TextBlock Text="COMING SOON • MILESTONE 03" Foreground="#E9D5FF" FontSize="11" FontWeight="Bold" />
-                </Border>
+        <!-- 1. Header with Branch Selector -->
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-                <!-- Title -->
-                <TextBlock Text="{Binding FeatureName}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,12" />
-
-                <!-- Description -->
-                <TextBlock Text="{Binding MilestoneDescription}" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextAlignment="Center" LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,20" />
-
-                <!-- Target Roadmap Box -->
-                <Border Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="16,12" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock Text="Planned Equalizer Capabilities:" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,6" />
-                        <TextBlock Text="• 10-band and 31-band graphic equalizer per output device" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
-                        <TextBlock Text="• Parametric EQ with customizable Q-factor and high/low shelf filters" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
-                        <TextBlock Text="• Individual room acoustic calibration for Home Theatre vs TV speakers" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
-                        <TextBlock Text="• Zero-latency BiQuad DSP filtering algorithms" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2" />
-                    </StackPanel>
-                </Border>
+            <StackPanel Grid.Column="0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Parametric Equalizer &amp; DSP" FontSize="22" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" />
+                    <Border Background="{StaticResource BrushAccentMuted}" CornerRadius="12" Padding="10,3" Margin="14,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="DIGITAL BIQUAD PROCESSING" Foreground="#93C5FD" FontSize="11" FontWeight="Bold" />
+                    </Border>
+                </StackPanel>
+                <TextBlock Text="{Binding BranchHeader}" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" />
             </StackPanel>
+
+            <!-- Branch Switcher Buttons -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="Home Theatre (3.5 mm)" Height="34" Padding="14,0" Margin="0,0,8,0"
+                        Command="{Binding SwitchBranchCommand}" CommandParameter="1">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource OutlineButton}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHomeTheatreSelected}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource BrushAccent}" />
+                                    <Setter Property="Foreground" Value="#FFFFFF" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <Button Content="TV / HDMI" Height="34" Padding="14,0"
+                        Command="{Binding SwitchBranchCommand}" CommandParameter="0">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource OutlineButton}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHomeTheatreSelected}" Value="False">
+                                    <Setter Property="Background" Value="{StaticResource BrushAccent}" />
+                                    <Setter Property="Foreground" Value="#FFFFFF" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Notification Banner -->
+        <Border Grid.Row="1" Background="{StaticResource BrushAccentMuted}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,12"
+                Visibility="{Binding StatusNotification, Converter={StaticResource StringToVis}}">
+            <TextBlock Text="{Binding StatusNotification}" Foreground="#BFDBFE" FontSize="12" FontWeight="Medium" />
         </Border>
+
+        <!-- 2. Main Content (Top: 9-Band Graphic Equalizer) -->
+        <Grid Grid.Row="2" Margin="0,0,0,14">
+            <Border Style="{StaticResource CardPanel}" Padding="20,16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- EQ Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="9-BAND GRAPHIC EQUALIZER" FontSize="12" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,16,0" VerticalAlignment="Center" />
+                            <CheckBox Content="Enable EQ" IsChecked="{Binding IsEqEnabled, Mode=TwoWay}" Style="{StaticResource ModernCheckBox}" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Style="{StaticResource OutlineButton}" Command="{Binding ResetEqCommand}" Height="28" Padding="12,0" Margin="0,0,8,0">
+                                <TextBlock Text="Reset Flat (0 dB)" />
+                            </Button>
+                            <Button Style="{StaticResource OutlineButton}" Command="{Binding SaveAsCustomPresetCommand}" Height="28" Padding="12,0">
+                                <TextBlock Text="Save to Custom Preset" />
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 9 Sliders Uniform Grid -->
+                    <UniformGrid Grid.Row="1" Columns="9" Margin="0,10,0,10">
+                        <!-- Band 1: 60 Hz -->
+                        <Grid Margin="4,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding Gain60Hz, StringFormat={}{0:+0.0;-0.0;0.0} dB}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <Slider Grid.Row="1" Orientation="Vertical" Minimum="-12" Maximum="12" Value="{Binding Gain60Hz, Mode=TwoWay}" HorizontalAlignment="Center" TickFrequency="3" IsSnapToTickEnabled="False" />
+                            <TextBlock Grid.Row="2" Text="60 Hz" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                        </Grid>
+
+                        <!-- Band 2: 120 Hz -->
+                        <Grid Margin="4,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding Gain120Hz, StringFormat={}{0:+0.0;-0.0;0.0} dB}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <Slider Grid.Row="1" Orientation="Vertical" Minimum="-12" Maximum="12" Value="{Binding Gain120Hz, Mode=TwoWay}" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Text="120 Hz" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                        </Grid>
+
+                        <!-- Band 3: 250 Hz -->
+                        <Grid Margin="4,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding Gain250Hz, StringFormat={}{0:+0.0;-0.0;0.0} dB}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <Slider Grid.Row="1" Orientation="Vertical" Minimum="-12" Maximum="12" Value="{Binding Gain250Hz, Mode=TwoWay}" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Text="250 Hz" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                        </Grid>
+
+                        <!-- Band 4: 500 Hz -->
+                        <Grid Margin="4,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding Gain500Hz, StringFormat={}{0:+0.0;-0.0;0.0} dB}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <Slider Grid.Row="1" Orientation="Vertical" Minimum="-12" Maximum="12" Value="{Binding Gain500Hz, Mode=TwoWay}" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Text="500 Hz" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                        </Grid>
+
+                        <!-- Band 5: 1 kHz -->
+                        <Grid Margin="4,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding Gain1000Hz, StringFormat={}{0:+0.0;-0.0;0.0} dB}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <Slider Grid.Row="1" Orientation="Vertical" Minimum="-12" Maximum="12" Value="{Binding Gain1000Hz, Mode=TwoWay}" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Text="1 kHz" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                        </Grid>
+
+                        <!-- Band 6: 2 kHz -->
+                        <Grid Margin="4,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding Gain2000Hz, StringFormat={}{0:+0.0;-0.0;0.0} dB}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <Slider Grid.Row="1" Orientation="Vertical" Minimum="-12" Maximum="12" Value="{Binding Gain2000Hz, Mode=TwoWay}" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Text="2 kHz" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                        </Grid>
+
+                        <!-- Band 7: 4 kHz -->
+                        <Grid Margin="4,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding Gain4000Hz, StringFormat={}{0:+0.0;-0.0;0.0} dB}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <Slider Grid.Row="1" Orientation="Vertical" Minimum="-12" Maximum="12" Value="{Binding Gain4000Hz, Mode=TwoWay}" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Text="4 kHz" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                        </Grid>
+
+                        <!-- Band 8: 8 kHz -->
+                        <Grid Margin="4,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding Gain8000Hz, StringFormat={}{0:+0.0;-0.0;0.0} dB}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <Slider Grid.Row="1" Orientation="Vertical" Minimum="-12" Maximum="12" Value="{Binding Gain8000Hz, Mode=TwoWay}" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Text="8 kHz" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                        </Grid>
+
+                        <!-- Band 9: 16 kHz -->
+                        <Grid Margin="4,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding Gain16000Hz, StringFormat={}{0:+0.0;-0.0;0.0} dB}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <Slider Grid.Row="1" Orientation="Vertical" Minimum="-12" Maximum="12" Value="{Binding Gain16000Hz, Mode=TwoWay}" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Text="16 kHz" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                        </Grid>
+                    </UniformGrid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 3. Specialized Processing Cards (Dialogue Enhancement & Bass Crossover) -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Card A: Dialogue Enhancement -->
+            <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="16,14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="DIALOGUE ENHANCEMENT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="Vocal Clarity &amp; Speech Leveler" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <CheckBox Grid.Column="1" Content="Active" IsChecked="{Binding IsDialogueEnabled, Mode=TwoWay}" Style="{StaticResource ModernCheckBox}" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <!-- Vocal Boost Slider -->
+                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="45" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Voice Boost" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center" />
+                        <Slider Grid.Column="1" Minimum="0" Maximum="9" Value="{Binding DialogueVoiceBoostDb, Mode=TwoWay}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding DialogueVoiceBoostDb, StringFormat={}{0:F1} dB}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" TextAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <!-- Enhancement Mix Slider -->
+                    <Grid Grid.Row="2" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="45" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Clarity Factor" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center" />
+                        <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding DialogueEnhancementAmount, Mode=TwoWay}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding DialogueEnhancementAmount, StringFormat={}{0:P0}}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" TextAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <!-- Dynamic Compression Ratio -->
+                    <Grid Grid.Row="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="45" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Leveler Ratio" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center" />
+                        <Slider Grid.Column="1" Minimum="1" Maximum="3.5" Value="{Binding DialogueCompressionRatio, Mode=TwoWay}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding DialogueCompressionRatio, StringFormat={}{0:F1}:1}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" TextAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Card B: Bass Processing & Subwoofer Management -->
+            <Border Grid.Column="2" Style="{StaticResource CardPanel}" Padding="16,14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="BASS &amp; SUBWOOFER PROCESSING" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="Sub-Bass Boost &amp; Crossover" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <CheckBox Grid.Column="1" Content="Active" IsChecked="{Binding IsBassEnabled, Mode=TwoWay}" Style="{StaticResource ModernCheckBox}" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <!-- Bass Gain Slider -->
+                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="45" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Sub-Bass Gain" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center" />
+                        <Slider Grid.Column="1" Minimum="0" Maximum="12" Value="{Binding BassGainDb, Mode=TwoWay}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding BassGainDb, StringFormat={}{0:F1} dB}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushSuccess}" TextAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <!-- Crossover Cutoff Frequency Slider -->
+                    <Grid Grid.Row="2" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="45" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Crossover Cutoff" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center" />
+                        <Slider Grid.Column="1" Minimum="60" Maximum="200" Value="{Binding BassCrossoverFrequency, Mode=TwoWay}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding BassCrossoverFrequency, StringFormat={}{0:F0} Hz}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushSuccess}" TextAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <!-- Mono Subwoofer Mix & Low Pass Filter Toggles -->
+                    <Grid Grid.Row="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox Grid.Column="0" Content="Mono Sub Mix (L+R)" IsChecked="{Binding IsMonoSubwooferMix, Mode=TwoWay}" Style="{StaticResource ModernCheckBox}" />
+                        <CheckBox Grid.Column="1" Content="Low-Pass Slope" IsChecked="{Binding IsLowPassFilterEnabled, Mode=TwoWay}" Style="{StaticResource ModernCheckBox}" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
     </Grid>
 </UserControl>
-

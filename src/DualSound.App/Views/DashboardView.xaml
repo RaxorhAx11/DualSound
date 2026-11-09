@@ -4,21 +4,22 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:vm="clr-namespace:DualSound.App.ViewModels"
+             xmlns:enums="clr-namespace:DualSound.Contracts.Enums;assembly=DualSound.Contracts"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance vm:DashboardViewModel}"
-             d:DesignHeight="650" d:DesignWidth="980">
+             d:DesignHeight="700" d:DesignWidth="1020">
 
-    <!-- Responsive minimal container without unnecessary scrolling on normal desktop screens -->
-    <Grid Margin="28,20" VerticalAlignment="Stretch">
+    <Grid Margin="24,18" VerticalAlignment="Stretch">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- 1. Application Header -->
-        <Grid Grid.Row="0" Margin="0,0,0,18">
+        <!-- 1. Application Header with Master Engine Action -->
+        <Grid Grid.Row="0" Margin="0,0,0,14">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -31,22 +32,50 @@
                     <!-- Engine Status Indicator Badge -->
                     <Border Background="{StaticResource BrushCardBackgroundHover}" BorderBrush="{StaticResource BrushSurfaceBorder}" BorderThickness="1" CornerRadius="12" Padding="10,3" Margin="14,0,0,0" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse Width="7" Height="7" Fill="{StaticResource BrushSuccess}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <Ellipse Width="7" Height="7" Margin="0,0,6,0" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{StaticResource BrushTextMuted}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEngineRunning}" Value="True">
+                                                <Setter Property="Fill" Value="{StaticResource BrushSuccess}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
                             <TextBlock Text="{Binding EngineStatus}" FontSize="11" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
-                <TextBlock Text="Offline multi-device audio distributor for Windows 11" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" />
+                <TextBlock Text="Simultaneous TV (HDMI) and Home Theatre (3.5 mm) audio processor" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" />
             </StackPanel>
 
-            <!-- System Scan / Refresh Action -->
+            <!-- Master Engine Start/Stop & Scan Actions -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Command="{Binding ToggleEngineCommand}"
+                        Height="36" Padding="18,0" Margin="0,0,10,0">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+                            <Setter Property="Background" Value="{StaticResource BrushAccent}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEngineRunning}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource BrushDanger}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding EngineActionButtonText}" FontWeight="Bold" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
                 <Button Style="{StaticResource OutlineButton}"
                         Command="{Binding LoadDashboardCommand}"
                         IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolToVis}}"
-                        Height="34" Padding="14,0">
+                        Height="36" Padding="14,0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Path Data="{StaticResource IconRefresh}" Fill="{StaticResource BrushTextPrimary}" Width="13" Height="13" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <Path Data="{StaticResource IconRefresh}" Fill="{StaticResource BrushTextPrimary}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center" />
                         <TextBlock Text="Scan System" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
@@ -54,18 +83,117 @@
         </Grid>
 
         <!-- Busy / Scanning Banner -->
-        <Border Grid.Row="1" Background="{StaticResource BrushAccentMuted}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,16"
+        <Border Grid.Row="1" Background="{StaticResource BrushAccentMuted}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,12"
                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{Binding BusyMessage}" Foreground="#93C5FD" FontSize="12" FontWeight="Medium" />
-            </StackPanel>
+            <TextBlock Text="{Binding BusyMessage}" Foreground="#93C5FD" FontSize="12" FontWeight="Medium" />
         </Border>
 
-        <!-- 2. Audio Device Section: Two Main Output Cards (TV / HDMI & Home Theatre / 3.5 mm) -->
-        <Grid Grid.Row="2" Margin="0,0,0,16">
+        <!-- 2. Quick Sound Presets Bar -->
+        <Border Grid.Row="2" Style="{StaticResource CardPanel}" Padding="14,10" Margin="0,0,0,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <TextBlock Text="SOUND PRESET" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                </StackPanel>
+
+                <!-- Preset Buttons -->
+                <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                    <Button Content="Movie Theatre" Height="28" Padding="12,0" Margin="0,0,6,0"
+                            Command="{Binding SelectPresetCommand}" CommandParameter="{x:Static enums:AudioPresetType.MovieTheatre}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource OutlineButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePresetType}" Value="{x:Static enums:AudioPresetType.MovieTheatre}">
+                                        <Setter Property="Background" Value="{StaticResource BrushAccent}" />
+                                        <Setter Property="Foreground" Value="#FFFFFF" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <Button Content="Dialogue Boost" Height="28" Padding="12,0" Margin="0,0,6,0"
+                            Command="{Binding SelectPresetCommand}" CommandParameter="{x:Static enums:AudioPresetType.DialogueBoost}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource OutlineButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePresetType}" Value="{x:Static enums:AudioPresetType.DialogueBoost}">
+                                        <Setter Property="Background" Value="{StaticResource BrushAccent}" />
+                                        <Setter Property="Foreground" Value="#FFFFFF" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <Button Content="Bass Boost" Height="28" Padding="12,0" Margin="0,0,6,0"
+                            Command="{Binding SelectPresetCommand}" CommandParameter="{x:Static enums:AudioPresetType.BassBoost}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource OutlineButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePresetType}" Value="{x:Static enums:AudioPresetType.BassBoost}">
+                                        <Setter Property="Background" Value="{StaticResource BrushAccent}" />
+                                        <Setter Property="Foreground" Value="#FFFFFF" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <Button Content="Night Mode" Height="28" Padding="12,0" Margin="0,0,6,0"
+                            Command="{Binding SelectPresetCommand}" CommandParameter="{x:Static enums:AudioPresetType.NightMode}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource OutlineButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePresetType}" Value="{x:Static enums:AudioPresetType.NightMode}">
+                                        <Setter Property="Background" Value="{StaticResource BrushAccent}" />
+                                        <Setter Property="Foreground" Value="#FFFFFF" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <Button Content="Balanced" Height="28" Padding="12,0" Margin="0,0,6,0"
+                            Command="{Binding SelectPresetCommand}" CommandParameter="{x:Static enums:AudioPresetType.Balanced}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource OutlineButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePresetType}" Value="{x:Static enums:AudioPresetType.Balanced}">
+                                        <Setter Property="Background" Value="{StaticResource BrushAccent}" />
+                                        <Setter Property="Foreground" Value="#FFFFFF" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <Button Content="Custom" Height="28" Padding="12,0" Margin="0,0,6,0"
+                            Command="{Binding SelectPresetCommand}" CommandParameter="{x:Static enums:AudioPresetType.Custom}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource OutlineButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePresetType}" Value="{x:Static enums:AudioPresetType.Custom}">
+                                        <Setter Property="Background" Value="{StaticResource BrushAccent}" />
+                                        <Setter Property="Foreground" Value="#FFFFFF" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </WrapPanel>
+            </Grid>
+        </Border>
+
+        <!-- 3. Dual Audio Device Output Cards: TV (HDMI) & Home Theatre (3.5 mm) -->
+        <Grid Grid.Row="3" Margin="0,0,0,14">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="18" />
+                <ColumnDefinition Width="16" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
@@ -78,10 +206,11 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <!-- Card Header -->
-                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -94,7 +223,7 @@
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock Text="TV / HDMI Output" FontSize="15" FontWeight="SemiBold" />
-                            <TextBlock Text="Primary Video &amp; Ambient Channel" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="Primary Video &amp; Ambient Soundtrack" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
                         </StackPanel>
 
                         <!-- Selection Status Badge -->
@@ -105,11 +234,11 @@
                         </Border>
                     </Grid>
 
-                    <Separator Grid.Row="1" Background="{StaticResource BrushSurfaceBorderSubtle}" Margin="0,0,0,12" />
+                    <Separator Grid.Row="1" Background="{StaticResource BrushSurfaceBorderSubtle}" Margin="0,0,0,10" />
 
                     <!-- Device Selector Dropdown -->
-                    <StackPanel Grid.Row="2" Margin="0,0,0,14">
-                        <TextBlock Text="ASSIGNED DEVICE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,5" />
+                    <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                        <TextBlock Text="ASSIGNED PLAYBACK ENDPOINT" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,5" />
                         <ComboBox Style="{StaticResource ModernComboBox}"
                                   ItemsSource="{Binding AvailableHdmiDevices}"
                                   SelectedItem="{Binding SelectedHdmiDevice, Mode=TwoWay}"
@@ -120,58 +249,69 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <Ellipse Grid.Column="0" Width="7" Height="7" Fill="{Binding State, Converter={StaticResource StateToBrush}}" Margin="0,0,8,0" VerticalAlignment="Center" />
                                         <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="2" Text="{Binding DeviceTypeDescription}" FontSize="10" Foreground="{Binding DeviceType, Converter={StaticResource TypeToBrush}}" Margin="8,0,0,0" VerticalAlignment="Center" />
                                     </Grid>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </StackPanel>
 
-                    <!-- Device Properties Grid -->
-                    <Grid Grid.Row="3" Margin="0,0,0,14">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
+                    <!-- Volume & Mute Controls -->
+                    <Grid Grid.Row="3" Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- Connection Type -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
-                            <TextBlock Text="CONNECTION TYPE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
-                            <TextBlock Text="{Binding SelectedHdmiDevice.DeviceTypeDescription, FallbackValue='Not identified'}"
-                                       FontSize="12" FontWeight="Medium" Foreground="{Binding SelectedHdmiDevice.DeviceType, Converter={StaticResource TypeToBrush}}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                        <Button Grid.Column="0" Command="{Binding ToggleTvMuteCommand}" Height="28" Padding="10,0" Margin="0,0,10,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource OutlineButton}">
+                                    <Setter Property="Content" Value="Mute" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsTvMuted}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource BrushDangerBg}" />
+                                            <Setter Property="Foreground" Value="{StaticResource BrushDanger}" />
+                                            <Setter Property="Content" Value="MUTED" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
 
-                        <!-- Windows State -->
-                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
-                            <TextBlock Text="WINDOWS STATE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
-                            <TextBlock Text="{Binding SelectedHdmiDevice.StateDescription, FallbackValue='No device'}"
-                                       FontSize="12" FontWeight="Medium" Foreground="{Binding SelectedHdmiDevice.State, Converter={StaticResource StateToBrush}}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                        <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding TvVolume, Mode=TwoWay}" VerticalAlignment="Center" />
 
-                        <!-- Driver Adapter -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2">
-                            <TextBlock Text="HARDWARE ADAPTER" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
-                            <TextBlock Text="{Binding SelectedHdmiDevice.AdapterName, FallbackValue='-'}"
-                                       FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding TvVolume, StringFormat={}{0:P0}}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" Width="40" TextAlignment="Right" VerticalAlignment="Center" />
                     </Grid>
 
-                    <!-- Connection Availability Footer -->
-                    <Border Grid.Row="4" Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="12,8" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
+                    <!-- Live VU Level Meters -->
+                    <Border Grid.Row="4" Background="#0B0F19" CornerRadius="6" Padding="12,8" Margin="0,0,0,10" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
                         <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Availability: " FontSize="11" FontWeight="Medium" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="{Binding HdmiConnectionAvailability}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" />
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="6" />
+                                <RowDefinition Height="6" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,4">
+                                <TextBlock Text="LIVE OUTPUT LEVEL" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                                <TextBlock Text="{Binding FormattedTvPeak}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" HorizontalAlignment="Right" />
+                            </Grid>
+
+                            <!-- Left Bar -->
+                            <ProgressBar Grid.Row="1" Minimum="0" Maximum="1" Value="{Binding TvMeterLevelLeft}" Height="4" Background="#1E293B" Foreground="{StaticResource BrushAccent}" BorderThickness="0" Margin="0,0,0,2" />
+                            <!-- Right Bar -->
+                            <ProgressBar Grid.Row="2" Minimum="0" Maximum="1" Value="{Binding TvMeterLevelRight}" Height="4" Background="#1E293B" Foreground="{StaticResource BrushAccent}" BorderThickness="0" />
                         </Grid>
+                    </Border>
+
+                    <!-- Availability Footer -->
+                    <Border Grid.Row="5" Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="10,6" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
+                        <TextBlock Text="{Binding HdmiConnectionAvailability}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" />
                     </Border>
                 </Grid>
             </Border>
@@ -185,10 +325,11 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <!-- Card Header -->
-                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -201,7 +342,7 @@
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock Text="Home Theatre / 3.5 mm Output" FontSize="15" FontWeight="SemiBold" />
-                            <TextBlock Text="Surround &amp; Acoustic Bass Channel" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="Enhanced Dialogue &amp; Acoustic Subwoofer" FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
                         </StackPanel>
 
                         <!-- Selection Status Badge -->
@@ -212,11 +353,11 @@
                         </Border>
                     </Grid>
 
-                    <Separator Grid.Row="1" Background="{StaticResource BrushSurfaceBorderSubtle}" Margin="0,0,0,12" />
+                    <Separator Grid.Row="1" Background="{StaticResource BrushSurfaceBorderSubtle}" Margin="0,0,0,10" />
 
                     <!-- Device Selector Dropdown -->
-                    <StackPanel Grid.Row="2" Margin="0,0,0,14">
-                        <TextBlock Text="ASSIGNED DEVICE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,5" />
+                    <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                        <TextBlock Text="ASSIGNED PLAYBACK ENDPOINT" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,5" />
                         <ComboBox Style="{StaticResource ModernComboBox}"
                                   ItemsSource="{Binding AvailableAnalogDevices}"
                                   SelectedItem="{Binding SelectedAnalogDevice, Mode=TwoWay}"
@@ -227,65 +368,76 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <Ellipse Grid.Column="0" Width="7" Height="7" Fill="{Binding State, Converter={StaticResource StateToBrush}}" Margin="0,0,8,0" VerticalAlignment="Center" />
                                         <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="2" Text="{Binding DeviceTypeDescription}" FontSize="10" Foreground="{Binding DeviceType, Converter={StaticResource TypeToBrush}}" Margin="8,0,0,0" VerticalAlignment="Center" />
                                     </Grid>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </StackPanel>
 
-                    <!-- Device Properties Grid -->
-                    <Grid Grid.Row="3" Margin="0,0,0,14">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
+                    <!-- Volume & Mute Controls -->
+                    <Grid Grid.Row="3" Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- Connection Type -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
-                            <TextBlock Text="CONNECTION TYPE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
-                            <TextBlock Text="{Binding SelectedAnalogDevice.DeviceTypeDescription, FallbackValue='Not identified'}"
-                                       FontSize="12" FontWeight="Medium" Foreground="{Binding SelectedAnalogDevice.DeviceType, Converter={StaticResource TypeToBrush}}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                        <Button Grid.Column="0" Command="{Binding ToggleHomeTheatreMuteCommand}" Height="28" Padding="10,0" Margin="0,0,10,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource OutlineButton}">
+                                    <Setter Property="Content" Value="Mute" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsHomeTheatreMuted}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource BrushDangerBg}" />
+                                            <Setter Property="Foreground" Value="{StaticResource BrushDanger}" />
+                                            <Setter Property="Content" Value="MUTED" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
 
-                        <!-- Windows State -->
-                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
-                            <TextBlock Text="WINDOWS STATE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
-                            <TextBlock Text="{Binding SelectedAnalogDevice.StateDescription, FallbackValue='No device'}"
-                                       FontSize="12" FontWeight="Medium" Foreground="{Binding SelectedAnalogDevice.State, Converter={StaticResource StateToBrush}}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                        <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding HomeTheatreVolume, Mode=TwoWay}" VerticalAlignment="Center" />
 
-                        <!-- Driver Adapter -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2">
-                            <TextBlock Text="HARDWARE ADAPTER" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
-                            <TextBlock Text="{Binding SelectedAnalogDevice.AdapterName, FallbackValue='-'}"
-                                       FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding HomeTheatreVolume, StringFormat={}{0:P0}}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" Width="40" TextAlignment="Right" VerticalAlignment="Center" />
                     </Grid>
 
-                    <!-- Connection Availability Footer -->
-                    <Border Grid.Row="4" Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="12,8" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
+                    <!-- Live VU Level Meters -->
+                    <Border Grid.Row="4" Background="#0B0F19" CornerRadius="6" Padding="12,8" Margin="0,0,0,10" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
                         <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Availability: " FontSize="11" FontWeight="Medium" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="{Binding AnalogConnectionAvailability}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" />
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="6" />
+                                <RowDefinition Height="6" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,4">
+                                <TextBlock Text="LIVE OUTPUT LEVEL" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                                <TextBlock Text="{Binding FormattedHomeTheatrePeak}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushSuccess}" HorizontalAlignment="Right" />
+                            </Grid>
+
+                            <!-- Left Bar -->
+                            <ProgressBar Grid.Row="1" Minimum="0" Maximum="1" Value="{Binding HomeTheatreMeterLevelLeft}" Height="4" Background="#1E293B" Foreground="{StaticResource BrushSuccess}" BorderThickness="0" Margin="0,0,0,2" />
+                            <!-- Right Bar -->
+                            <ProgressBar Grid.Row="2" Minimum="0" Maximum="1" Value="{Binding HomeTheatreMeterLevelRight}" Height="4" Background="#1E293B" Foreground="{StaticResource BrushSuccess}" BorderThickness="0" />
                         </Grid>
+                    </Border>
+
+                    <!-- Availability Footer -->
+                    <Border Grid.Row="5" Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="10,6" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
+                        <TextBlock Text="{Binding AnalogConnectionAvailability}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" />
                     </Border>
                 </Grid>
             </Border>
         </Grid>
 
-        <!-- 3. Default Audio Device Section -->
-        <Border Grid.Row="3" Style="{StaticResource CardPanel}" Padding="16,12">
+        <!-- 4. Default Audio Device & Navigation Section -->
+        <Border Grid.Row="4" Style="{StaticResource CardPanel}" Padding="16,10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -293,25 +445,22 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="WINDOWS DEFAULT PLAYBACK DEVICE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3" />
-                    <TextBlock Text="{Binding DefaultDevice.Name, FallbackValue='No default device detected'}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4" />
-
-                    <!-- Sample Rate & Channel Count -->
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Sample Rate: " FontSize="12" Foreground="{StaticResource BrushTextMuted}" />
-                        <TextBlock Text="{Binding DefaultDevice.FormattedSampleRate, FallbackValue='Unavailable'}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,16,0" />
-
-                        <TextBlock Text="Channels: " FontSize="12" Foreground="{StaticResource BrushTextMuted}" />
-                        <TextBlock Text="{Binding DefaultDevice.FormattedChannels, FallbackValue='Unavailable'}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextPrimary}" />
-                    </StackPanel>
+                    <TextBlock Text="WINDOWS DEFAULT PLAYBACK ENDPOINT" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,2" />
+                    <TextBlock Text="{Binding DefaultDevice.Name, FallbackValue='No default device detected'}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" />
                 </StackPanel>
 
-                <!-- Navigation Action to Audio Devices Page -->
-                <Button Grid.Column="1" Style="{StaticResource OutlineButton}"
-                        Command="{Binding NavigateToDevicesCommand}"
-                        VerticalAlignment="Center" Height="32" Padding="14,0">
-                    <TextBlock Text="Manage in Audio Devices" VerticalAlignment="Center" />
-                </Button>
+                <!-- Navigation Quick-Actions -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource OutlineButton}" Command="{Binding NavigateToEqualizerCommand}" Height="30" Padding="12,0" Margin="0,0,8,0">
+                        <TextBlock Text="Adjust Equalizer &amp; Bass" />
+                    </Button>
+                    <Button Style="{StaticResource OutlineButton}" Command="{Binding NavigateToSyncCommand}" Height="30" Padding="12,0" Margin="0,0,8,0">
+                        <TextBlock Text="Sync Delays" />
+                    </Button>
+                    <Button Style="{StaticResource OutlineButton}" Command="{Binding NavigateToDevicesCommand}" Height="30" Padding="12,0">
+                        <TextBlock Text="All Devices" />
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 

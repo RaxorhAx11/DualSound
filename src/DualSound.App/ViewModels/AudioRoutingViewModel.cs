@@ -15,12 +15,13 @@ using Microsoft.Extensions.Logging;
 namespace DualSound.App.ViewModels;
 
 /// <summary>
-/// ViewModel for the Real-Time Audio Capture Engine (Milestone 02).
-/// Manages recording device enumeration (e.g. VB-Audio CABLE Output or Microphone),
-/// WASAPI capture lifecycle (Start/Stop), real-time VU level monitoring, and bounded buffer health.
+/// Production ViewModel for Audio Routing Matrix and Real-Time Signal Monitoring.
+/// Manages Windows recording capture source, simultaneous TV HDMI and Home Theatre 3.5mm outputs,
+/// independent branch volumes, enable/disable switches, and multi-channel VU levels.
 /// </summary>
 public sealed partial class AudioRoutingViewModel : ViewModelBase
 {
+    private readonly IAudioEngineService _audioEngine;
     private readonly IAudioCapture _captureEngine;
     private readonly IAudioDeviceDiscoveryService _discoveryService;
     private readonly IAudioDeviceMonitorService _monitorService;
@@ -30,14 +31,13 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
 
     private Task? _currentRefreshTask;
 
-    // Milestone status information
-    public string FeatureName => "Real-Time Audio Capture Engine";
+    // Feature and Milestone info
+    public string FeatureName => "Real-Time Audio Routing & Capture Matrix";
 
     public string MilestoneDescription =>
-        "Milestone 02: Real-Time WASAPI Audio Capture Engine activated.\n" +
-        "Dual-output distribution to TV (HDMI) and Home Theatre (3.5 mm) is Coming Soon in subsequent milestones.";
+        "V1.0 Complete Matrix: Capture audio from virtual cable (e.g. CABLE Output) and route simultaneously to TV HDMI and Home Theatre 3.5 mm with independent DSP and delay lines.\n(Physical 5.1/7.1 speaker distribution is Coming Soon in extended surround configurations).";
 
-    // Capture Source
+    // 1. Capture Source (Recording Endpoints)
     [ObservableProperty]
     private ObservableCollection<AudioDeviceInfo> _availableRecordingDevices = [];
 
@@ -50,7 +50,46 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasNoDevices;
 
-    // Capture Engine Lifecycle
+    // 2. Playback Destinations
+    [ObservableProperty]
+    private ObservableCollection<AudioDeviceInfo> _availablePlaybackDevices = [];
+
+    [ObservableProperty]
+    private AudioDeviceInfo? _selectedTvDevice;
+
+    [ObservableProperty]
+    private AudioDeviceInfo? _selectedHomeTheatreDevice;
+
+    // TV Branch Output Controls
+    [ObservableProperty]
+    private bool _isTvEnabled = true;
+
+    [ObservableProperty]
+    private float _tvVolume = 1.0f;
+
+    [ObservableProperty]
+    private bool _isTvMuted;
+
+    [ObservableProperty]
+    private string _tvPeakDbfs = "-60.0 dB";
+
+    // Home Theatre Branch Output Controls
+    [ObservableProperty]
+    private bool _isHomeTheatreEnabled = true;
+
+    [ObservableProperty]
+    private float _homeTheatreVolume = 1.0f;
+
+    [ObservableProperty]
+    private bool _isHomeTheatreMuted;
+
+    [ObservableProperty]
+    private string _homeTheatrePeakDbfs = "-60.0 dB";
+
+    // Master Engine Lifecycle
+    [ObservableProperty]
+    private AudioEngineState _engineState = AudioEngineState.Stopped;
+
     [ObservableProperty]
     private AudioCaptureState _captureState = AudioCaptureState.Stopped;
 
@@ -66,7 +105,7 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
     [ObservableProperty]
     private bool _canStopCapture;
 
-    // Real-Time Audio Levels & Metering
+    // Capture VU Levels & Metering
     [ObservableProperty]
     private float _leftMeterLevel;
 
@@ -119,11 +158,11 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
     [ObservableProperty]
     private long _totalFramesCaptured;
 
-    // Status Banner
     [ObservableProperty]
     private string? _statusBannerMessage;
 
     public AudioRoutingViewModel(
+        IAudioEngineService audioEngine,
         IAudioCapture captureEngine,
         IAudioDeviceDiscoveryService discoveryService,
         IAudioDeviceMonitorService monitorService,
@@ -131,6 +170,7 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
         IDispatcherService dispatcherService,
         ILogger<AudioRoutingViewModel> logger)
     {
+        _audioEngine = audioEngine;
         _captureEngine = captureEngine;
         _discoveryService = discoveryService;
         _monitorService = monitorService;
@@ -138,19 +178,29 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
         _dispatcherService = dispatcherService;
         _logger = logger;
 
-        Title = "Audio Capture";
+        Title = "Audio Routing";
 
-        // Hook capture engine events
+        // Initial volume & enable state
+        _tvVolume = _settingsService.CurrentSettings.TvBranch.Volume;
+        _isTvEnabled = _settingsService.CurrentSettings.TvBranch.IsEnabled;
+        _isTvMuted = _settingsService.CurrentSettings.TvBranch.IsMuted;
+
+        _homeTheatreVolume = _settingsService.CurrentSettings.HomeTheatreBranch.Volume;
+        _isHomeTheatreEnabled = _settingsService.CurrentSettings.HomeTheatreBranch.IsEnabled;
+        _isHomeTheatreMuted = _settingsService.CurrentSettings.HomeTheatreBranch.IsMuted;
+
+        // Wire engine events
         _captureEngine.StateChanged += OnCaptureStateChanged;
-        _captureEngine.LevelsUpdated += OnCaptureLevelsUpdated;
+        _captureEngine.LevelsUpdated += OnLevelsUpdated;
         _captureEngine.CaptureError += OnCaptureError;
         _monitorService.DeviceChanged += OnAudioDeviceChanged;
+        _audioEngine.StateChanged += OnEngineStateChanged;
 
-        _ = RefreshRecordingDevicesAsync();
+        _ = RefreshAllDevicesAsync();
     }
 
     [RelayCommand]
-    public async Task RefreshRecordingDevicesAsync()
+    public async Task RefreshAllDevicesAsync()
     {
         if (_currentRefreshTask != null && !_currentRefreshTask.IsCompleted)
         {
@@ -158,14 +208,17 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
             return;
         }
 
-        _currentRefreshTask = RefreshRecordingDevicesInternalAsync();
+        _currentRefreshTask = RefreshAllDevicesInternalAsync();
         await _currentRefreshTask;
     }
 
-    private async Task RefreshRecordingDevicesInternalAsync()
+    [RelayCommand]
+    public Task RefreshRecordingDevicesAsync() => RefreshAllDevicesAsync();
+
+    private async Task RefreshAllDevicesInternalAsync()
     {
         IsBusy = true;
-        BusyMessage = "Discovering Windows recording endpoints...";
+        BusyMessage = "Enumerating audio endpoints...";
         ClearError();
 
         try
@@ -173,37 +226,44 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
             var includeInactive = _settingsService.CurrentSettings.ShowDisconnectedDevices ||
                                   _settingsService.CurrentSettings.ShowDisabledDevices;
 
-            var devices = await _discoveryService.GetRecordingDevicesAsync(includeInactive);
-            var defaultDev = await _discoveryService.GetDefaultRecordingDeviceAsync();
+            var recDevices = await _discoveryService.GetRecordingDevicesAsync(includeInactive);
+            var defaultRec = await _discoveryService.GetDefaultRecordingDeviceAsync();
+
+            var playDevices = await _discoveryService.GetPlaybackDevicesAsync(includeInactive);
 
             _dispatcherService.Invoke(() =>
             {
+                // Recording Devices
                 AvailableRecordingDevices.Clear();
-                foreach (var d in devices)
-                {
-                    AvailableRecordingDevices.Add(d);
-                }
-
-                DefaultRecordingDevice = defaultDev;
+                foreach (var dev in recDevices) AvailableRecordingDevices.Add(dev);
+                DefaultRecordingDevice = defaultRec;
                 HasNoDevices = AvailableRecordingDevices.Count == 0;
 
-                // Restore preferred device from settings or choose first active/default
                 var savedCaptureId = _settingsService.CurrentSettings.PreferredCaptureDeviceId;
-                var resolved = devices.FirstOrDefault(d => d.Id == savedCaptureId) ??
-                               devices.FirstOrDefault(d => d.IsDefaultRecording && d.IsActive) ??
-                               devices.FirstOrDefault(d => d.IsActive) ??
-                               devices.FirstOrDefault();
+                SelectedRecordingDevice = AvailableRecordingDevices.FirstOrDefault(d => d.Id == savedCaptureId) ??
+                                          AvailableRecordingDevices.FirstOrDefault(d => d.IsDefaultRecording) ??
+                                          AvailableRecordingDevices.FirstOrDefault(d => d.IsActive) ??
+                                          AvailableRecordingDevices.FirstOrDefault();
 
-                SelectedRecordingDevice = resolved;
-                UpdateCommandStates();
+                // Playback Devices
+                AvailablePlaybackDevices.Clear();
+                foreach (var dev in playDevices) AvailablePlaybackDevices.Add(dev);
+
+                var savedTvId = _settingsService.CurrentSettings.PreferredPrimaryDeviceId;
+                SelectedTvDevice = AvailablePlaybackDevices.FirstOrDefault(d => d.Id == savedTvId) ??
+                                   AvailablePlaybackDevices.FirstOrDefault(d => d.DeviceType == AudioDeviceType.HdmiDisplayPort && d.IsActive) ??
+                                   AvailablePlaybackDevices.FirstOrDefault();
+
+                var savedHtId = _settingsService.CurrentSettings.PreferredSecondaryDeviceId;
+                SelectedHomeTheatreDevice = AvailablePlaybackDevices.FirstOrDefault(d => d.Id == savedHtId) ??
+                                            AvailablePlaybackDevices.FirstOrDefault(d => d.DeviceType is AudioDeviceType.LineOut35mm or AudioDeviceType.Headphones or AudioDeviceType.Speakers && d.IsActive) ??
+                                            AvailablePlaybackDevices.FirstOrDefault();
             });
-
-            _logger.LogInformation("Discovered {Count} recording endpoints", devices.Count);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to discover recording devices");
-            SetError($"Error discovering recording endpoints: {ex.Message}");
+            _logger.LogError(ex, "Failed to refresh audio routing endpoints");
+            SetError($"Failed to enumerate endpoints: {ex.Message}");
         }
         finally
         {
@@ -215,25 +275,22 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
     [RelayCommand]
     public async Task StartCaptureAsync()
     {
-        if (SelectedRecordingDevice == null)
-        {
-            SetError("Please select a recording endpoint before starting capture.");
-            return;
-        }
-
         ClearError();
         StatusBannerMessage = null;
 
         try
         {
-            _captureEngine.SetDevice(SelectedRecordingDevice);
-            await _captureEngine.StartAsync(SelectedRecordingDevice.Id);
-            StatusBannerMessage = $"Actively capturing from '{SelectedRecordingDevice.Name}'.";
+            if (SelectedRecordingDevice != null)
+            {
+                _captureEngine.SetDevice(SelectedRecordingDevice);
+            }
+
+            await _audioEngine.StartAsync();
+            StatusBannerMessage = "Master audio engine and capture running.";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to initiate audio capture");
-            SetError($"Failed to start audio capture: {ex.Message}");
+            SetError($"Failed to start routing: {ex.Message}");
         }
     }
 
@@ -243,13 +300,12 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
         ClearError();
         try
         {
-            await _captureEngine.StopAsync();
-            StatusBannerMessage = "Audio capture stopped.";
+            await _audioEngine.StopAsync();
+            StatusBannerMessage = "Audio routing stopped.";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while stopping audio capture");
-            SetError($"Failed to stop audio capture: {ex.Message}");
+            SetError($"Failed to stop routing: {ex.Message}");
         }
     }
 
@@ -261,7 +317,67 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
             _settingsService.CurrentSettings.PreferredCaptureDeviceId = value.Id;
             _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
         }
-        UpdateCommandStates();
+    }
+
+    partial void OnSelectedTvDeviceChanged(AudioDeviceInfo? value)
+    {
+        if (value != null)
+        {
+            _settingsService.CurrentSettings.PreferredPrimaryDeviceId = value.Id;
+            _settingsService.CurrentSettings.TvBranch.DeviceId = value.Id;
+            _audioEngine.OutputService.TvBranch.SetDevice(value.Id);
+            _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+        }
+    }
+
+    partial void OnSelectedHomeTheatreDeviceChanged(AudioDeviceInfo? value)
+    {
+        if (value != null)
+        {
+            _settingsService.CurrentSettings.PreferredSecondaryDeviceId = value.Id;
+            _settingsService.CurrentSettings.HomeTheatreBranch.DeviceId = value.Id;
+            _audioEngine.OutputService.HomeTheatreBranch.SetDevice(value.Id);
+            _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+        }
+    }
+
+    partial void OnTvVolumeChanged(float value)
+    {
+        _audioEngine.OutputService.TvBranch.Volume = value;
+        _settingsService.CurrentSettings.TvBranch.Volume = value;
+        _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+    }
+
+    partial void OnIsTvEnabledChanged(bool value)
+    {
+        _audioEngine.OutputService.TvBranch.IsEnabled = value;
+        _settingsService.CurrentSettings.TvBranch.IsEnabled = value;
+        _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+    }
+
+    partial void OnHomeTheatreVolumeChanged(float value)
+    {
+        _audioEngine.OutputService.HomeTheatreBranch.Volume = value;
+        _settingsService.CurrentSettings.HomeTheatreBranch.Volume = value;
+        _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+    }
+
+    partial void OnIsHomeTheatreEnabledChanged(bool value)
+    {
+        _audioEngine.OutputService.HomeTheatreBranch.IsEnabled = value;
+        _settingsService.CurrentSettings.HomeTheatreBranch.IsEnabled = value;
+        _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+    }
+
+    private void OnEngineStateChanged(object? sender, AudioEngineState state)
+    {
+        _dispatcherService.Invoke(() =>
+        {
+            EngineState = state;
+            IsCapturing = state == AudioEngineState.Running;
+            CanStartCapture = state is AudioEngineState.Stopped or AudioEngineState.Error;
+            CanStopCapture = state is AudioEngineState.Running or AudioEngineState.Initializing;
+        });
     }
 
     private void OnCaptureStateChanged(object? sender, AudioCaptureStateChangedEventArgs e)
@@ -271,90 +387,60 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
             CaptureState = e.NewState;
             CaptureStatusText = e.NewState switch
             {
-                AudioCaptureState.Stopped => "Ready",
-                AudioCaptureState.Starting => "Initializing...",
-                AudioCaptureState.Capturing => "Capturing",
+                AudioCaptureState.Stopped => "Stopped",
+                AudioCaptureState.Starting => "Starting...",
+                AudioCaptureState.Capturing => "Active (Capturing)",
                 AudioCaptureState.Stopping => "Stopping...",
-                AudioCaptureState.Interrupted => "Device Disconnected",
+                AudioCaptureState.Interrupted => "Interrupted (Reconnecting...)",
                 AudioCaptureState.Error => "Capture Error",
                 _ => "Unknown"
             };
 
-            IsCapturing = e.NewState == AudioCaptureState.Capturing;
-            UpdateCommandStates();
-
-            if (e.NewState == AudioCaptureState.Capturing)
-            {
-                FormattedSampleRate = $"{_captureEngine.SourceSampleRate:N0} Hz (Internal: 48,000 Hz)";
-                FormattedChannels = _captureEngine.SourceChannels == 1 ? "1 Ch (Mono to Stereo)" : $"{_captureEngine.SourceChannels} Ch (Stereo)";
-                FormattedFormat = _captureEngine.SourceFormatDescription;
-            }
-
-            if (!string.IsNullOrEmpty(e.Message))
-            {
-                StatusBannerMessage = e.Message;
-            }
+            FormattedSampleRate = $"{_captureEngine.SourceSampleRate:N0} Hz";
+            FormattedChannels = $"{_captureEngine.SourceChannels} Channels";
+            FormattedFormat = _captureEngine.SourceFormatDescription;
         });
     }
 
-    private void OnCaptureLevelsUpdated(object? sender, AudioLevelsEventArgs e)
+    private void OnLevelsUpdated(object? sender, AudioLevelsEventArgs e)
     {
         _dispatcherService.Invoke(() =>
         {
-            var levels = e.Levels;
+            LeftMeterLevel = e.Levels.LeftPeak;
+            RightMeterLevel = e.Levels.RightPeak;
+            LeftPeakDb = e.Levels.LeftPeakDb;
+            RightPeakDb = e.Levels.RightPeakDb;
+            MasterPeakDb = e.Levels.MasterPeakDb;
 
-            LeftMeterLevel = levels.LeftPeak;
-            RightMeterLevel = levels.RightPeak;
+            FormattedLeftPeak = $"{e.Levels.LeftPeakDb:F1} dB";
+            FormattedRightPeak = $"{e.Levels.RightPeakDb:F1} dB";
+            FormattedMasterPeak = $"{e.Levels.MasterPeakDb:F1} dB";
 
-            LeftPeakDb = levels.LeftPeakDb;
-            RightPeakDb = levels.RightPeakDb;
-            MasterPeakDb = levels.MasterPeakDb;
-
-            FormattedLeftPeak = FormatDb(levels.LeftPeakDb);
-            FormattedRightPeak = FormatDb(levels.RightPeakDb);
-            FormattedMasterPeak = FormatDb(levels.MasterPeakDb);
-
-            HasSignal = levels.HasSignal;
-            SignalStatusText = levels.HasSignal ? "Signal Detected" : "No Signal Detected";
+            HasSignal = e.Levels.HasSignal;
+            SignalStatusText = e.Levels.HasSignal ? "Signal Active" : "Silence / Noise Gate Active";
 
             BufferOccupancy = _captureEngine.BufferOccupancyPercentage;
-            FormattedBufferOccupancy = $"{BufferOccupancy * 100f:F1}%";
+            FormattedBufferOccupancy = $"{_captureEngine.BufferOccupancyPercentage:F1}%";
             BufferOverflows = _captureEngine.BufferOverflows;
             TotalFramesCaptured = _captureEngine.TotalFramesCaptured;
+
+            // Update output level meters
+            TvPeakDbfs = $"{_audioEngine.OutputService.TvBranch.CurrentLevels.MasterPeakDb:F1} dB";
+            HomeTheatrePeakDbfs = $"{_audioEngine.OutputService.HomeTheatreBranch.CurrentLevels.MasterPeakDb:F1} dB";
         });
     }
 
     private void OnCaptureError(object? sender, AudioCaptureErrorEventArgs e)
     {
-        _dispatcherService.Invoke(() =>
-        {
-            SetError($"Capture engine alert: {e.Message}");
-        });
+        _dispatcherService.Invoke(() => SetError(e.Message));
     }
 
     private void OnAudioDeviceChanged(object? sender, DeviceChangeEventArgs e)
     {
         _dispatcherService.Invoke(() =>
         {
-            _ = RefreshRecordingDevicesAsync();
+            _ = RefreshAllDevicesAsync();
         });
-    }
-
-    private void UpdateCommandStates()
-    {
-        CanStartCapture = CaptureState is AudioCaptureState.Stopped or AudioCaptureState.Error or AudioCaptureState.Interrupted &&
-                          SelectedRecordingDevice != null;
-
-        CanStopCapture = CaptureState is AudioCaptureState.Capturing or AudioCaptureState.Starting;
-    }
-
-    private static string FormatDb(float db)
-    {
-        if (db <= -59.5f)
-        {
-            return "-∞ dB";
-        }
-        return $"{db:F1} dB";
     }
 
     protected override void Dispose(bool disposing)
@@ -362,9 +448,10 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
         if (disposing)
         {
             _captureEngine.StateChanged -= OnCaptureStateChanged;
-            _captureEngine.LevelsUpdated -= OnCaptureLevelsUpdated;
+            _captureEngine.LevelsUpdated -= OnLevelsUpdated;
             _captureEngine.CaptureError -= OnCaptureError;
             _monitorService.DeviceChanged -= OnAudioDeviceChanged;
+            _audioEngine.StateChanged -= OnEngineStateChanged;
         }
         base.Dispose(disposing);
     }

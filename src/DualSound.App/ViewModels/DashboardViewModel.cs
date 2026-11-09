@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,12 +16,14 @@ using Microsoft.Extensions.Logging;
 namespace DualSound.App.ViewModels;
 
 /// <summary>
-/// Simplified, clean ViewModel for the DualSound Dashboard.
-/// Displays only the essential audio information: TV/HDMI output card,
-/// Home Theatre/3.5mm output card, and the current Windows default playback device.
+/// Production ViewModel for the DualSound Master Dashboard.
+/// Orchestrates TV HDMI and Home Theatre 3.5mm outputs, master audio engine state,
+/// quick presets selection, independent volume/mute, and live output VU level metering.
 /// </summary>
 public sealed partial class DashboardViewModel : ViewModelBase
 {
+    private readonly IAudioEngineService _audioEngine;
+    private readonly IAudioPresetService _presetService;
     private readonly IAudioDeviceDiscoveryService _discoveryService;
     private readonly IAudioDeviceMonitorService _monitorService;
     private readonly ISettingsService _settingsService;
@@ -28,16 +32,36 @@ public sealed partial class DashboardViewModel : ViewModelBase
     private readonly ILogger<DashboardViewModel> _logger;
 
     private Task? _currentScanTask;
+    private Timer? _meterTimer;
 
-    // Header State
+    // Master Engine State
     [ObservableProperty]
     private string _engineStatus = "Audio Engine Ready";
+
+    [ObservableProperty]
+    private AudioEngineState _engineState = AudioEngineState.Stopped;
+
+    [ObservableProperty]
+    private bool _isEngineRunning;
+
+    [ObservableProperty]
+    private string _engineActionButtonText = "Start Audio Engine";
+
+    // Presets
+    [ObservableProperty]
+    private AudioPresetType _activePresetType = AudioPresetType.MovieTheatre;
+
+    [ObservableProperty]
+    private string _activePresetName = "Movie Theatre";
+
+    [ObservableProperty]
+    private string _activePresetDescription = string.Empty;
 
     // Default Device Section
     [ObservableProperty]
     private AudioDeviceInfo? _defaultDevice;
 
-    // Available devices for selection
+    // Available playback endpoints for dropdowns
     [ObservableProperty]
     private ObservableCollection<AudioDeviceInfo> _availableHdmiDevices = [];
 
@@ -57,6 +81,21 @@ public sealed partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isHdmiSelected;
 
+    [ObservableProperty]
+    private float _tvVolume = 1.0f;
+
+    [ObservableProperty]
+    private bool _isTvMuted;
+
+    [ObservableProperty]
+    private float _tvMeterLevelLeft;
+
+    [ObservableProperty]
+    private float _tvMeterLevelRight;
+
+    [ObservableProperty]
+    private string _formattedTvPeak = "-60.0 dB";
+
     // Home Theatre / 3.5 mm Output Card
     [ObservableProperty]
     private AudioDeviceInfo? _selectedAnalogDevice;
@@ -67,7 +106,26 @@ public sealed partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isAnalogSelected;
 
+    [ObservableProperty]
+    private float _homeTheatreVolume = 1.0f;
+
+    [ObservableProperty]
+    private bool _isHomeTheatreMuted;
+
+    [ObservableProperty]
+    private float _homeTheatreMeterLevelLeft;
+
+    [ObservableProperty]
+    private float _homeTheatreMeterLevelRight;
+
+    [ObservableProperty]
+    private string _formattedHomeTheatrePeak = "-60.0 dB";
+
+    public IReadOnlyList<AudioPreset> Presets => _presetService.AvailablePresets;
+
     public DashboardViewModel(
+        IAudioEngineService audioEngine,
+        IAudioPresetService presetService,
         IAudioDeviceDiscoveryService discoveryService,
         IAudioDeviceMonitorService monitorService,
         ISettingsService settingsService,
@@ -75,6 +133,8 @@ public sealed partial class DashboardViewModel : ViewModelBase
         IDispatcherService dispatcherService,
         ILogger<DashboardViewModel> logger)
     {
+        _audioEngine = audioEngine;
+        _presetService = presetService;
         _discoveryService = discoveryService;
         _monitorService = monitorService;
         _settingsService = settingsService;
@@ -84,7 +144,27 @@ public sealed partial class DashboardViewModel : ViewModelBase
 
         Title = "Dashboard";
 
+        // Sync initial engine & preset states
+        _engineState = _audioEngine.State;
+        UpdateEngineStateVisuals(_engineState);
+
+        _activePresetType = _presetService.ActivePresetType;
+        _activePresetName = _presetService.ActivePreset.Name;
+        _activePresetDescription = _presetService.ActivePreset.Description;
+
+        // Load initial volume settings
+        _tvVolume = _settingsService.CurrentSettings.TvBranch.Volume;
+        _isTvMuted = _settingsService.CurrentSettings.TvBranch.IsMuted;
+        _homeTheatreVolume = _settingsService.CurrentSettings.HomeTheatreBranch.Volume;
+        _isHomeTheatreMuted = _settingsService.CurrentSettings.HomeTheatreBranch.IsMuted;
+
+        _audioEngine.StateChanged += OnEngineStateChanged;
+        _audioEngine.EngineError += OnEngineError;
+        _presetService.PresetChanged += OnPresetChanged;
         _monitorService.DeviceChanged += OnAudioDeviceChanged;
+
+        // Decoupled 30 Hz VU metering timer
+        _meterTimer = new Timer(OnMeterTimerTick, null, 33, 33);
 
         _ = LoadDashboardAsync();
     }
@@ -106,7 +186,6 @@ public sealed partial class DashboardViewModel : ViewModelBase
     {
         IsBusy = true;
         BusyMessage = "Scanning audio system...";
-        EngineStatus = "Scanning audio endpoints...";
         ClearError();
 
         try
@@ -128,52 +207,51 @@ public sealed partial class DashboardViewModel : ViewModelBase
                 foreach (var device in devices)
                 {
                     AllPlaybackDevices.Add(device);
-
-                    // Populate HDMI-capable devices or all devices if none found
-                    if (device.DeviceType == AudioDeviceType.HdmiDisplayPort ||
-                        device.Name.Contains("HDMI", StringComparison.OrdinalIgnoreCase) ||
-                        device.Name.Contains("Display", StringComparison.OrdinalIgnoreCase))
-                    {
-                        AvailableHdmiDevices.Add(device);
-                    }
-
-                    // Populate 3.5mm/analog devices
-                    if (device.DeviceType is AudioDeviceType.LineOut35mm or AudioDeviceType.Headphones or AudioDeviceType.Speakers ||
-                        device.EnumeratorName.Equals("HDAUDIO", StringComparison.OrdinalIgnoreCase))
-                    {
-                        AvailableAnalogDevices.Add(device);
-                    }
                 }
 
-                // If specialized lists are empty, allow selection from all devices so user is never blocked
-                if (AvailableHdmiDevices.Count == 0)
-                {
-                    foreach (var d in devices) AvailableHdmiDevices.Add(d);
-                }
-                if (AvailableAnalogDevices.Count == 0)
-                {
-                    foreach (var d in devices) AvailableAnalogDevices.Add(d);
-                }
+                // Populate TV/HDMI choices: prioritizing HDMI/Display/TV endpoints first, then other available devices
+                var hdmiMatches = devices.Where(d =>
+                    d.DeviceType == AudioDeviceType.HdmiDisplayPort ||
+                    d.Name.Contains("HDMI", StringComparison.OrdinalIgnoreCase) ||
+                    d.Name.Contains("Display", StringComparison.OrdinalIgnoreCase) ||
+                    d.Name.Contains("TV", StringComparison.OrdinalIgnoreCase) ||
+                    d.AdapterName.Contains("AMD High Definition", StringComparison.OrdinalIgnoreCase) ||
+                    d.AdapterName.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase)).OrderByDescending(d => d.IsActive).ToList();
 
-                // Resolve TV / HDMI device from settings or first available
-                var savedPrimaryId = _settingsService.CurrentSettings.PreferredPrimaryDeviceId;
+                var otherHdmiDevices = devices.Except(hdmiMatches).OrderByDescending(d => d.IsActive).ToList();
+                foreach (var d in hdmiMatches) AvailableHdmiDevices.Add(d);
+                foreach (var d in otherHdmiDevices) AvailableHdmiDevices.Add(d);
+
+                // Populate Home Theatre/3.5mm choices: prioritizing Analog/Realtek/Speakers/Headphones endpoints first
+                var analogMatches = devices.Where(d =>
+                    d.DeviceType is AudioDeviceType.LineOut35mm or AudioDeviceType.Headphones or AudioDeviceType.Speakers ||
+                    d.EnumeratorName.Equals("HDAUDIO", StringComparison.OrdinalIgnoreCase) ||
+                    d.AdapterName.Contains("Realtek", StringComparison.OrdinalIgnoreCase)).OrderByDescending(d => d.IsActive).ToList();
+
+                var otherAnalogDevices = devices.Except(analogMatches).OrderByDescending(d => d.IsActive).ToList();
+                foreach (var d in analogMatches) AvailableAnalogDevices.Add(d);
+                foreach (var d in otherAnalogDevices) AvailableAnalogDevices.Add(d);
+
+                // Resolve TV / HDMI device
+                var savedPrimaryId = _settingsService.CurrentSettings.TvBranch?.DeviceId ?? _settingsService.CurrentSettings.PreferredPrimaryDeviceId;
                 var resolvedHdmi = devices.FirstOrDefault(d => d.Id == savedPrimaryId) ??
-                                   devices.FirstOrDefault(d => d.DeviceType == AudioDeviceType.HdmiDisplayPort && d.IsActive) ??
-                                   devices.FirstOrDefault(d => d.DeviceType == AudioDeviceType.HdmiDisplayPort);
+                                   hdmiMatches.FirstOrDefault(d => d.IsActive) ??
+                                   hdmiMatches.FirstOrDefault() ??
+                                   devices.FirstOrDefault();
 
-                // Resolve Home Theatre / 3.5mm device from settings or first available
-                var savedSecondaryId = _settingsService.CurrentSettings.PreferredSecondaryDeviceId;
+                // Resolve Home Theatre / 3.5mm device
+                var savedSecondaryId = _settingsService.CurrentSettings.HomeTheatreBranch?.DeviceId ?? _settingsService.CurrentSettings.PreferredSecondaryDeviceId;
                 var resolvedAnalog = devices.FirstOrDefault(d => d.Id == savedSecondaryId) ??
-                                     devices.FirstOrDefault(d => d.DeviceType is AudioDeviceType.LineOut35mm or AudioDeviceType.Headphones or AudioDeviceType.Speakers && d.IsActive) ??
-                                     devices.FirstOrDefault(d => d.DeviceType is AudioDeviceType.LineOut35mm or AudioDeviceType.Headphones or AudioDeviceType.Speakers);
+                                     analogMatches.FirstOrDefault(d => d.IsActive && d.Id != resolvedHdmi?.Id) ??
+                                     analogMatches.FirstOrDefault(d => d.Id != resolvedHdmi?.Id) ??
+                                     devices.FirstOrDefault(d => d.Id != resolvedHdmi?.Id) ??
+                                     devices.FirstOrDefault();
 
                 SelectedHdmiDevice = resolvedHdmi;
                 SelectedAnalogDevice = resolvedAnalog;
 
                 UpdateHdmiStatus();
                 UpdateAnalogStatus();
-
-                EngineStatus = "Audio Engine Ready (Offline)";
             });
 
             _logger.LogInformation("Dashboard loaded successfully with {Count} audio endpoints", devices.Count);
@@ -182,7 +260,6 @@ public sealed partial class DashboardViewModel : ViewModelBase
         {
             _logger.LogError(ex, "Failed to load dashboard data");
             SetError($"Error discovering audio endpoints: {ex.Message}");
-            EngineStatus = "Audio Engine Error";
         }
         finally
         {
@@ -191,12 +268,96 @@ public sealed partial class DashboardViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    public async Task ToggleEngineAsync()
+    {
+        ClearError();
+        try
+        {
+            if (IsEngineRunning)
+            {
+                await _audioEngine.StopAsync();
+            }
+            else
+            {
+                // Ensure output devices are assigned in settings before starting
+                if (SelectedHdmiDevice != null)
+                {
+                    _settingsService.CurrentSettings.PreferredPrimaryDeviceId = SelectedHdmiDevice.Id;
+                    _settingsService.CurrentSettings.TvBranch.DeviceId = SelectedHdmiDevice.Id;
+                    _audioEngine.OutputService.TvBranch.SetDevice(SelectedHdmiDevice.Id);
+                }
+                if (SelectedAnalogDevice != null)
+                {
+                    _settingsService.CurrentSettings.PreferredSecondaryDeviceId = SelectedAnalogDevice.Id;
+                    _settingsService.CurrentSettings.HomeTheatreBranch.DeviceId = SelectedAnalogDevice.Id;
+                    _audioEngine.OutputService.HomeTheatreBranch.SetDevice(SelectedAnalogDevice.Id);
+                }
+
+                await _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+                await _audioEngine.StartAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            SetError($"Engine Error: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    public void SelectPreset(AudioPresetType type)
+    {
+        _presetService.ApplyPreset(type);
+    }
+
+    [RelayCommand]
+    public void ToggleTvMute()
+    {
+        IsTvMuted = !IsTvMuted;
+    }
+
+    [RelayCommand]
+    public void ToggleHomeTheatreMute()
+    {
+        IsHomeTheatreMuted = !IsHomeTheatreMuted;
+    }
+
+    partial void OnTvVolumeChanged(float value)
+    {
+        _audioEngine.OutputService.TvBranch.Volume = value;
+        _settingsService.CurrentSettings.TvBranch.Volume = value;
+        _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+    }
+
+    partial void OnIsTvMutedChanged(bool value)
+    {
+        _audioEngine.OutputService.TvBranch.IsMuted = value;
+        _settingsService.CurrentSettings.TvBranch.IsMuted = value;
+        _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+    }
+
+    partial void OnHomeTheatreVolumeChanged(float value)
+    {
+        _audioEngine.OutputService.HomeTheatreBranch.Volume = value;
+        _settingsService.CurrentSettings.HomeTheatreBranch.Volume = value;
+        _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+    }
+
+    partial void OnIsHomeTheatreMutedChanged(bool value)
+    {
+        _audioEngine.OutputService.HomeTheatreBranch.IsMuted = value;
+        _settingsService.CurrentSettings.HomeTheatreBranch.IsMuted = value;
+        _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+    }
+
     partial void OnSelectedHdmiDeviceChanged(AudioDeviceInfo? value)
     {
         UpdateHdmiStatus();
         if (value != null)
         {
             _settingsService.CurrentSettings.PreferredPrimaryDeviceId = value.Id;
+            _settingsService.CurrentSettings.TvBranch.DeviceId = value.Id;
+            _audioEngine.OutputService.TvBranch.SetDevice(value.Id);
             _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
         }
     }
@@ -207,6 +368,8 @@ public sealed partial class DashboardViewModel : ViewModelBase
         if (value != null)
         {
             _settingsService.CurrentSettings.PreferredSecondaryDeviceId = value.Id;
+            _settingsService.CurrentSettings.HomeTheatreBranch.DeviceId = value.Id;
+            _audioEngine.OutputService.HomeTheatreBranch.SetDevice(value.Id);
             _ = _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
         }
     }
@@ -246,17 +409,111 @@ public sealed partial class DashboardViewModel : ViewModelBase
             AudioDeviceState.NotPresent => "Hardware Not Detected",
             AudioDeviceState.Unplugged => "3.5 mm Jack Unplugged",
             AudioDeviceState.Disabled => "Disabled in Windows",
-            // Strictly follow rule: Do not assume analog jack is physically connected based only on active endpoint.
-            // If physical connection status cannot be verified, display "Connection status unavailable".
             AudioDeviceState.Active => "Connection status unavailable",
             _ => "Connection status unavailable"
         };
+    }
+
+    private void OnEngineStateChanged(object? sender, AudioEngineState newState)
+    {
+        _dispatcherService.Invoke(() =>
+        {
+            EngineState = newState;
+            UpdateEngineStateVisuals(newState);
+        });
+    }
+
+    private void UpdateEngineStateVisuals(AudioEngineState state)
+    {
+        IsEngineRunning = state == AudioEngineState.Running;
+        EngineActionButtonText = IsEngineRunning ? "Stop Audio Engine" : "Start Audio Engine";
+
+        EngineStatus = state switch
+        {
+            AudioEngineState.Stopped => "Audio Engine Stopped (Offline)",
+            AudioEngineState.Initializing => "Starting Pipeline...",
+            AudioEngineState.Running => "Dual Output Active (TV + Home Theatre)",
+            AudioEngineState.Recovering => "Recovering Audio Streams...",
+            AudioEngineState.Error => "Engine Error",
+            _ => "Audio Engine Ready"
+        };
+    }
+
+    private void OnEngineError(object? sender, string errorMessage)
+    {
+        _dispatcherService.Invoke(() => SetError(errorMessage));
+    }
+
+    private void OnPresetChanged(object? sender, AudioPreset preset)
+    {
+        _dispatcherService.Invoke(() =>
+        {
+            ActivePresetType = preset.PresetType;
+            ActivePresetName = preset.Name;
+            ActivePresetDescription = preset.Description;
+        });
+    }
+
+    private void OnMeterTimerTick(object? state)
+    {
+        if (!IsEngineRunning)
+        {
+            if (TvMeterLevelLeft > 0f || HomeTheatreMeterLevelLeft > 0f)
+            {
+                _dispatcherService.Invoke(() =>
+                {
+                    TvMeterLevelLeft = 0f;
+                    TvMeterLevelRight = 0f;
+                    FormattedTvPeak = "-60.0 dB";
+                    HomeTheatreMeterLevelLeft = 0f;
+                    HomeTheatreMeterLevelRight = 0f;
+                    FormattedHomeTheatrePeak = "-60.0 dB";
+                });
+            }
+            return;
+        }
+
+        try
+        {
+            var tvLevels = _audioEngine.OutputService.TvBranch.CurrentLevels;
+            var htLevels = _audioEngine.OutputService.HomeTheatreBranch.CurrentLevels;
+
+            _dispatcherService.Invoke(() =>
+            {
+                TvMeterLevelLeft = tvLevels.LeftPeak;
+                TvMeterLevelRight = tvLevels.RightPeak;
+                FormattedTvPeak = $"{tvLevels.MasterPeakDb:F1} dB";
+
+                HomeTheatreMeterLevelLeft = htLevels.LeftPeak;
+                HomeTheatreMeterLevelRight = htLevels.RightPeak;
+                FormattedHomeTheatrePeak = $"{htLevels.MasterPeakDb:F1} dB";
+            });
+        }
+        catch { }
     }
 
     [RelayCommand]
     private void NavigateToDevices()
     {
         _navigationService.NavigateTo<AudioDevicesViewModel>();
+    }
+
+    [RelayCommand]
+    private void NavigateToRouting()
+    {
+        _navigationService.NavigateTo<AudioRoutingViewModel>();
+    }
+
+    [RelayCommand]
+    private void NavigateToEqualizer()
+    {
+        _navigationService.NavigateTo<EqualizerViewModel>();
+    }
+
+    [RelayCommand]
+    private void NavigateToSync()
+    {
+        _navigationService.NavigateTo<SynchronizationViewModel>();
     }
 
     private void OnAudioDeviceChanged(object? sender, DeviceChangeEventArgs e)
@@ -271,7 +528,11 @@ public sealed partial class DashboardViewModel : ViewModelBase
     {
         if (disposing)
         {
+            _audioEngine.StateChanged -= OnEngineStateChanged;
+            _audioEngine.EngineError -= OnEngineError;
+            _presetService.PresetChanged -= OnPresetChanged;
             _monitorService.DeviceChanged -= OnAudioDeviceChanged;
+            _meterTimer?.Dispose();
         }
         base.Dispose(disposing);
     }

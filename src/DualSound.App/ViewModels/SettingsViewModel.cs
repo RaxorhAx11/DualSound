@@ -13,13 +13,14 @@ namespace DualSound.App.ViewModels;
 
 /// <summary>
 /// ViewModel for managing local JSON settings.
-/// Strictly offline; does not persist temporary audio buffers or communicate with any network service.
+/// Strictly offline; never transmits data or requires network connectivity.
 /// </summary>
 public sealed partial class SettingsViewModel : ViewModelBase
 {
     private readonly ISettingsService _settingsService;
     private readonly ILogger<SettingsViewModel> _logger;
 
+    // Hardware Detection Settings
     [ObservableProperty]
     private bool _autoRefreshDevices;
 
@@ -32,6 +33,27 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _showDisabledDevices;
 
+    // Startup Behavior
+    [ObservableProperty]
+    private bool _autoStartEngine;
+
+    [ObservableProperty]
+    private bool _startMinimized;
+
+    // Audio Engine & DSP Performance
+    [ObservableProperty]
+    private int _targetSampleRate = 48000;
+
+    [ObservableProperty]
+    private int _bufferLatencyMs = 50;
+
+    [ObservableProperty]
+    private bool _autoRestartOnDeviceLoss = true;
+
+    // Logging & Diagnostics
+    [ObservableProperty]
+    private string _minimumLogLevel = "Information";
+
     [ObservableProperty]
     private string _settingsFilePath = string.Empty;
 
@@ -40,6 +62,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private DateTime? _lastSavedUtc;
+
+    public string[] AvailableLogLevels { get; } = ["Debug", "Information", "Warning", "Error"];
+
+    public int[] AvailableSampleRates { get; } = [44100, 48000, 96000];
 
     public SettingsViewModel(ISettingsService settingsService, ILogger<SettingsViewModel> logger)
     {
@@ -59,6 +85,12 @@ public sealed partial class SettingsViewModel : ViewModelBase
         RefreshIntervalSeconds = settings.RefreshIntervalSeconds;
         ShowDisconnectedDevices = settings.ShowDisconnectedDevices;
         ShowDisabledDevices = settings.ShowDisabledDevices;
+        AutoStartEngine = settings.AutoStartEngine;
+        StartMinimized = settings.StartMinimized;
+        TargetSampleRate = settings.TargetSampleRate;
+        BufferLatencyMs = settings.BufferLatencyMs;
+        AutoRestartOnDeviceLoss = settings.AutoRestartOnDeviceLoss;
+        MinimumLogLevel = settings.MinimumLogLevel;
         LastSavedUtc = settings.LastSavedAtUtc;
     }
 
@@ -77,16 +109,26 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 RefreshIntervalSeconds = Math.Clamp(RefreshIntervalSeconds, 1, 60),
                 ShowDisconnectedDevices = ShowDisconnectedDevices,
                 ShowDisabledDevices = ShowDisabledDevices,
-                FavoriteDeviceIds = _settingsService.CurrentSettings.FavoriteDeviceIds,
+                AutoStartEngine = AutoStartEngine,
+                StartMinimized = StartMinimized,
+                TargetSampleRate = TargetSampleRate,
+                BufferLatencyMs = Math.Clamp(BufferLatencyMs, 10, 200),
+                AutoRestartOnDeviceLoss = AutoRestartOnDeviceLoss,
+                MinimumLogLevel = MinimumLogLevel,
+                ActivePreset = _settingsService.CurrentSettings.ActivePreset,
+                TvBranch = _settingsService.CurrentSettings.TvBranch,
+                HomeTheatreBranch = _settingsService.CurrentSettings.HomeTheatreBranch,
                 PreferredPrimaryDeviceId = _settingsService.CurrentSettings.PreferredPrimaryDeviceId,
                 PreferredSecondaryDeviceId = _settingsService.CurrentSettings.PreferredSecondaryDeviceId,
-                MinimumLogLevel = _settingsService.CurrentSettings.MinimumLogLevel
+                PreferredCaptureDeviceId = _settingsService.CurrentSettings.PreferredCaptureDeviceId,
+                FavoriteDeviceIds = _settingsService.CurrentSettings.FavoriteDeviceIds,
+                CustomPreset = _settingsService.CurrentSettings.CustomPreset
             };
 
             await _settingsService.SaveSettingsAsync(updated);
             LastSavedUtc = updated.LastSavedAtUtc;
-            SaveMessage = "Preferences saved successfully to local disk.";
-            _logger.LogInformation("Saved updated settings via SettingsViewModel");
+            SaveMessage = "Preferences saved successfully to local JSON configuration.";
+            _logger.LogInformation("Saved updated application preferences to disk");
         }
         catch (Exception ex)
         {
@@ -101,35 +143,39 @@ public sealed partial class SettingsViewModel : ViewModelBase
         ClearError();
         SaveMessage = null;
 
-        var defaults = new AppSettings();
-        AutoRefreshDevices = defaults.AutoRefreshDevices;
-        RefreshIntervalSeconds = defaults.RefreshIntervalSeconds;
-        ShowDisconnectedDevices = defaults.ShowDisconnectedDevices;
-        ShowDisabledDevices = defaults.ShowDisabledDevices;
-
-        await SaveSettingsAsync();
-        SaveMessage = "Settings reset to default values.";
+        try
+        {
+            var defaults = new AppSettings();
+            await _settingsService.SaveSettingsAsync(defaults);
+            LoadCurrentSettings();
+            SaveMessage = "Settings restored to factory defaults.";
+            _logger.LogInformation("Restored settings to factory defaults");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reset settings");
+            SetError($"Error resetting settings: {ex.Message}");
+        }
     }
 
     [RelayCommand]
-    private void OpenSettingsFolder()
+    public void OpenSettingsDirectory()
     {
         try
         {
-            var folder = Path.GetDirectoryName(SettingsFilePath);
-            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
+            var dir = Path.GetDirectoryName(SettingsFilePath);
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
             {
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = folder,
+                    FileName = dir,
                     UseShellExecute = true
                 });
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not open settings folder");
+            SetError($"Could not open directory: {ex.Message}");
         }
     }
 }
-

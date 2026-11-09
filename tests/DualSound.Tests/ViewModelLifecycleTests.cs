@@ -3,6 +3,10 @@ using System.Threading.Tasks;
 using DualSound.App.Services;
 using DualSound.App.ViewModels;
 using DualSound.Audio.Capture;
+using DualSound.Audio.Engine;
+using DualSound.Audio.Output;
+using DualSound.Audio.Presets;
+using DualSound.Audio.Sync;
 using DualSound.Core.Services;
 using DualSound.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +32,10 @@ public class ViewModelLifecycleTests
         services.AddSingleton<IAudioDeviceMonitorService, WindowsAudioDeviceMonitorService>();
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IAudioCapture, WasapiCaptureService>();
+        services.AddSingleton<IAudioSyncManager, AudioSyncManager>();
+        services.AddSingleton<IDualAudioOutputService, DualAudioOutputService>();
+        services.AddSingleton<IAudioPresetService, AudioPresetService>();
+        services.AddSingleton<IAudioEngineService, AudioEngineService>();
 
         services.AddSingleton<MainViewModel>();
         services.AddTransient<DashboardViewModel>();
@@ -57,23 +65,24 @@ public class ViewModelLifecycleTests
         Assert.IsType<AudioDevicesViewModel>(mainVm.CurrentView);
         Assert.Equal("Audio Devices", mainVm.CurrentView.Title);
 
-        // Navigate to Audio Routing (Coming Soon)
+        // Navigate to Audio Routing
         navService.NavigateTo<AudioRoutingViewModel>();
         Assert.IsType<AudioRoutingViewModel>(mainVm.CurrentView);
         var routingVm = (AudioRoutingViewModel)mainVm.CurrentView;
-        Assert.Contains("Coming Soon", routingVm.MilestoneDescription, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Audio Routing", routingVm.Title);
 
-        // Navigate to Equalizer (Coming Soon)
+        // Navigate to Equalizer
         navService.NavigateTo<EqualizerViewModel>();
         Assert.IsType<EqualizerViewModel>(mainVm.CurrentView);
         var eqVm = (EqualizerViewModel)mainVm.CurrentView;
-        Assert.Contains("Coming Soon", eqVm.MilestoneDescription, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Equalizer", eqVm.Title);
+        Assert.True(eqVm.IsEqEnabled);
 
-        // Navigate to Synchronization (Coming Soon)
+        // Navigate to Synchronization
         navService.NavigateTo<SynchronizationViewModel>();
         Assert.IsType<SynchronizationViewModel>(mainVm.CurrentView);
         var syncVm = (SynchronizationViewModel)mainVm.CurrentView;
-        Assert.Contains("Coming Soon", syncVm.MilestoneDescription, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Synchronization", syncVm.Title);
 
         // Navigate to Settings
         navService.NavigateTo<SettingsViewModel>();
