@@ -88,9 +88,32 @@ public sealed class DualAudioOutputService : IDualAudioOutputService
 
             await Task.WhenAll(tvTask, htTask);
 
+            bool tvRunning = _tvBranch.Client.State == AudioEngineState.Running;
+            bool htRunning = _htBranch.Client.State == AudioEngineState.Running;
+
+            if (!tvRunning && !htRunning)
+            {
+                SetState(AudioEngineState.Error);
+                throw new InvalidOperationException("Failed to start both audio output branches. Check device connections.");
+            }
+
             SetState(AudioEngineState.Running);
-            _logger.LogInformation("Simultaneous dual audio playback running: TV ({TvDevice}) and Home Theatre ({HtDevice})",
-                _tvBranch.DeviceName, _htBranch.DeviceName);
+
+            if (!tvRunning)
+            {
+                _logger.LogWarning("TV (HDMI) branch failed to start; running with Home Theatre branch only.");
+                OutputError?.Invoke(this, "TV (HDMI) branch failed to start, running with Home Theatre branch only.");
+            }
+            else if (!htRunning)
+            {
+                _logger.LogWarning("Home Theatre (3.5 mm) branch failed to start; running with TV branch only.");
+                OutputError?.Invoke(this, "Home Theatre (3.5 mm) branch failed to start, running with TV branch only.");
+            }
+            else
+            {
+                _logger.LogInformation("Simultaneous dual audio playback running: TV ({TvDevice}) and Home Theatre ({HtDevice})",
+                    _tvBranch.DeviceName, _htBranch.DeviceName);
+            }
         }
         catch (Exception ex)
         {
@@ -150,6 +173,38 @@ public sealed class DualAudioOutputService : IDualAudioOutputService
         var htSpan = _htScratchBuffer.AsSpan(0, len);
         _htBranch.Dsp.Process(htSpan);
         _htBranch.DelayBuffer.Write(htSpan);
+    }
+
+    /// <summary>
+    /// Feeds audio specifically to one branch (e.g. for isolated test tones).
+    /// </summary>
+    public void FeedBranchAudio(AudioOutputBranch branch, ReadOnlySpan<float> canonicalStereoSamples)
+    {
+        if (canonicalStereoSamples.IsEmpty) return;
+        int len = canonicalStereoSamples.Length;
+
+        if (branch == AudioOutputBranch.TvHdmi)
+        {
+            if (_tvScratchBuffer.Length < len)
+            {
+                Array.Resize(ref _tvScratchBuffer, len * 2);
+            }
+            canonicalStereoSamples.CopyTo(_tvScratchBuffer.AsSpan(0, len));
+            var tvSpan = _tvScratchBuffer.AsSpan(0, len);
+            _tvBranch.Dsp.Process(tvSpan);
+            _tvBranch.DelayBuffer.Write(tvSpan);
+        }
+        else if (branch == AudioOutputBranch.HomeTheatre35mm)
+        {
+            if (_htScratchBuffer.Length < len)
+            {
+                Array.Resize(ref _htScratchBuffer, len * 2);
+            }
+            canonicalStereoSamples.CopyTo(_htScratchBuffer.AsSpan(0, len));
+            var htSpan = _htScratchBuffer.AsSpan(0, len);
+            _htBranch.Dsp.Process(htSpan);
+            _htBranch.DelayBuffer.Write(htSpan);
+        }
     }
 
     public void ApplySettings(AppSettings settings)

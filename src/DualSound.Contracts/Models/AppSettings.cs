@@ -106,6 +106,37 @@ public sealed class AppSettings
     public DateTime? LastSavedAtUtc { get; set; }
 
     /// <summary>
+    /// Whether the initial multi-step setup wizard has been successfully completed.
+    /// </summary>
+    public bool IsSetupWizardCompleted { get; set; } = false;
+
+    /// <summary>
+    /// Detected or user-selected virtual audio playback endpoint ID (e.g. CABLE Input).
+    /// </summary>
+    public string? VirtualPlaybackDeviceId { get; set; }
+
+    /// <summary>
+    /// Detected or user-selected virtual audio recording endpoint ID (e.g. CABLE Output).
+    /// </summary>
+    public string? VirtualRecordingDeviceId { get; set; }
+
+    /// <summary>
+    /// Whether to restore the previous Windows default playback device on application exit.
+    /// Default is false to strictly prevent unexpected audio routing changes unless explicitly enabled.
+    /// </summary>
+    public bool RestoreDefaultDeviceOnExit { get; set; } = false;
+
+    /// <summary>
+    /// Stored previous Windows default playback device ID for optional user-requested restoration.
+    /// </summary>
+    public string? PreviousDefaultPlaybackDeviceId { get; set; }
+
+    /// <summary>
+    /// Whether to show the routing mismatch warning banner when desktop audio is not routed via the virtual cable.
+    /// </summary>
+    public bool ShowRoutingWarningBanner { get; set; } = true;
+
+    /// <summary>
     /// Minimum logging level persisted.
     /// </summary>
     public string MinimumLogLevel { get; set; } = "Information";

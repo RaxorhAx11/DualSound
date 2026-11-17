@@ -6,6 +6,7 @@ using DualSound.Audio.Capture;
 using DualSound.Audio.Engine;
 using DualSound.Audio.Output;
 using DualSound.Audio.Presets;
+using DualSound.Audio.Routing;
 using DualSound.Audio.Sync;
 using DualSound.Core.Services;
 using DualSound.Infrastructure.Services;
@@ -71,11 +72,26 @@ public partial class App : Application
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
 
-            // Auto-start engine if preferred in settings
-            if (settingsService.CurrentSettings.AutoStartEngine)
+            var routingService = _host.Services.GetRequiredService<ISystemAudioRoutingService>();
+            var navigationService = _host.Services.GetRequiredService<INavigationService>();
+
+            // Determine if first-time setup wizard should be launched
+            if (!settingsService.CurrentSettings.IsSetupWizardCompleted ||
+                string.IsNullOrWhiteSpace(settingsService.CurrentSettings.PreferredCaptureDeviceId))
             {
-                var engine = _host.Services.GetRequiredService<IAudioEngineService>();
-                _ = engine.StartAsync();
+                navigationService.NavigateTo<SetupWizardViewModel>();
+            }
+            else
+            {
+                // Run background system routing diagnostic
+                _ = routingService.ValidateRoutingAsync();
+
+                // Auto-start engine if preferred in settings
+                if (settingsService.CurrentSettings.AutoStartEngine)
+                {
+                    var engine = _host.Services.GetRequiredService<IAudioEngineService>();
+                    _ = engine.StartAsync();
+                }
             }
         }
         catch (Exception ex)
@@ -106,6 +122,7 @@ public partial class App : Application
         services.AddSingleton<IAudioSyncManager, AudioSyncManager>();
         services.AddSingleton<IDualAudioOutputService, DualAudioOutputService>();
         services.AddSingleton<IAudioPresetService, AudioPresetService>();
+        services.AddSingleton<ISystemAudioRoutingService, SystemAudioRoutingService>();
         services.AddSingleton<IAudioEngineService, AudioEngineService>();
 
         // ViewModels
@@ -116,6 +133,7 @@ public partial class App : Application
         services.AddTransient<EqualizerViewModel>();
         services.AddTransient<SynchronizationViewModel>();
         services.AddTransient<SettingsViewModel>();
+        services.AddTransient<SetupWizardViewModel>();
 
         // Windows
         services.AddSingleton<MainWindow>();
@@ -136,6 +154,9 @@ public partial class App : Application
 
                 var monitorService = _host.Services.GetService<IAudioDeviceMonitorService>();
                 monitorService?.Dispose();
+
+                var routingService = _host.Services.GetService<ISystemAudioRoutingService>();
+                routingService?.Dispose();
 
                 await _host.StopAsync(TimeSpan.FromSeconds(3));
                 _host.Dispose();

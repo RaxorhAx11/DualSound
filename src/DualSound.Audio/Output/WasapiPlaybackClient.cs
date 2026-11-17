@@ -110,81 +110,96 @@ public sealed class WasapiPlaybackClient : IDisposable
         lock (_stateLock)
         {
             if (_state is AudioEngineState.Stopped) return;
+            SetState(AudioEngineState.Stopped);
         }
 
-        await Task.Run(() =>
-        {
-            lock (_stateLock)
-            {
-                if (_sampleProvider != null)
-                {
-                    _sampleProvider.IsPlaying = false;
-                }
-
-                if (_wasapiOut != null)
-                {
-                    try { _wasapiOut.Stop(); } catch { }
-                }
-
-                CleanupResources();
-                SetState(AudioEngineState.Stopped);
-            }
-        }, cancellationToken);
+        await Task.Run(CleanupResources, cancellationToken);
 
         _logger.LogInformation("WASAPI playback branch {Branch} stopped cleanly", _branch);
     }
 
     private void InitializeAndStartPlayback()
     {
+        CleanupResources();
+
+        var enumerator = new MMDeviceEnumerator();
+        string? targetDeviceId;
         lock (_stateLock)
         {
-            CleanupResources();
+            targetDeviceId = _deviceId;
+        }
 
-            _enumerator = new MMDeviceEnumerator();
+        MMDevice? mmDevice = null;
 
-            // Resolve target device
-            if (!string.IsNullOrWhiteSpace(_deviceId))
+        // Resolve target device
+        if (!string.IsNullOrWhiteSpace(targetDeviceId))
+        {
+            try
             {
-                try
-                {
-                    _currentMmDevice = _enumerator.GetDevice(_deviceId);
-                }
-                catch
-                {
-                    _currentMmDevice = null;
-                }
+                mmDevice = enumerator.GetDevice(targetDeviceId);
+            }
+            catch
+            {
+                mmDevice = null;
             }
 
-            if (_currentMmDevice == null)
+            if (mmDevice == null)
             {
-                // Fallback to default render device if preferred not found
-                _currentMmDevice = _enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                enumerator.Dispose();
+                throw new InvalidOperationException(
+                    $"Assigned audio playback endpoint '{targetDeviceId}' for {_branch} was not found or is disconnected.");
             }
-
-            if (_currentMmDevice == null)
+        }
+        else
+        {
+            // Fallback to default render device ONLY when unassigned
+            var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            if (defaultDevice != null && defaultDevice.FriendlyName.Contains("CABLE Input", StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException($"No playback audio endpoint available for {_branch}");
+                enumerator.Dispose();
+                throw new InvalidOperationException(
+                    $"Default playback endpoint is set to Virtual Cable Input. Please assign physical output devices (HDMI / 3.5mm) for {_branch} in DualSound to avoid audio feedback loops.");
             }
+            mmDevice = defaultDevice;
+        }
 
-            _deviceName = _currentMmDevice.FriendlyName;
+        if (mmDevice == null)
+        {
+            enumerator.Dispose();
+            throw new InvalidOperationException($"No playback audio endpoint available for {_branch}");
+        }
 
-            // Query native hardware mix format
-            var mixFormat = _currentMmDevice.AudioClient.MixFormat;
-            _formatDescription = $"{mixFormat.SampleRate} Hz, {mixFormat.Channels} Ch, {mixFormat.BitsPerSample}-bit ({mixFormat.Encoding})";
+        var deviceName = mmDevice.FriendlyName;
 
-            // Create our 48 kHz stereo pull sample provider
-            _sampleProvider = new BranchPlaybackSampleProvider(_delayBuffer, 48000);
+        // Query native hardware mix format
+        var mixFormat = mmDevice.AudioClient.MixFormat;
+        var formatDescription = $"{mixFormat.SampleRate} Hz, {mixFormat.Channels} Ch, {mixFormat.BitsPerSample}-bit ({mixFormat.Encoding})";
 
-            // Adapt sample provider to device mix format
-            IWaveProvider waveProvider = AdaptToDeviceFormat(_sampleProvider, mixFormat);
+        // Create our 48 kHz stereo pull sample provider
+        var sampleProvider = new BranchPlaybackSampleProvider(_delayBuffer, 48000);
 
-            // Create WasapiOut in Shared mode (50ms latency target for stability)
-            _wasapiOut = new WasapiOut(_currentMmDevice, AudioClientShareMode.Shared, false, 50);
-            _wasapiOut.Init(waveProvider);
-            _wasapiOut.PlaybackStopped += OnPlaybackStopped;
+        // Adapt sample provider to device mix format
+        IWaveProvider waveProvider = AdaptToDeviceFormat(sampleProvider, mixFormat);
 
-            _sampleProvider.IsPlaying = true;
-            _wasapiOut.Play();
+        // Create WasapiOut in Shared mode (50ms latency target for stability)
+        var wasapiOut = new WasapiOut(mmDevice, AudioClientShareMode.Shared, false, 50);
+        wasapiOut.Init(waveProvider);
+        wasapiOut.PlaybackStopped += OnPlaybackStopped;
+
+        // Purge any stale buffer backlog accumulated prior to startup or during reconnection
+        _delayBuffer.Reset();
+
+        sampleProvider.IsPlaying = true;
+        wasapiOut.Play();
+
+        lock (_stateLock)
+        {
+            _enumerator = enumerator;
+            _currentMmDevice = mmDevice;
+            _deviceName = deviceName;
+            _formatDescription = formatDescription;
+            _sampleProvider = sampleProvider;
+            _wasapiOut = wasapiOut;
         }
     }
 
@@ -245,9 +260,14 @@ public sealed class WasapiPlaybackClient : IDisposable
         lock (_stateLock)
         {
             if (_state is AudioEngineState.Stopped) return;
-
             SetState(AudioEngineState.Recovering);
-            CleanupResources();
+        }
+
+        CleanupResources();
+
+        lock (_stateLock)
+        {
+            if (_state is AudioEngineState.Stopped) return;
 
             if (_reconnectAttempts < 5)
             {
@@ -282,40 +302,58 @@ public sealed class WasapiPlaybackClient : IDisposable
 
     private void CleanupResources()
     {
-        if (_wasapiOut != null)
+        if (_sampleProvider != null)
+        {
+            _sampleProvider.IsPlaying = false;
+        }
+
+        WasapiOut? wasapiOutToDispose;
+        MMDevice? deviceToDispose;
+        MMDeviceEnumerator? enumeratorToDispose;
+
+        lock (_stateLock)
+        {
+            wasapiOutToDispose = _wasapiOut;
+            if (_wasapiOut != null)
+            {
+                _wasapiOut.PlaybackStopped -= OnPlaybackStopped;
+                _wasapiOut = null;
+            }
+
+            deviceToDispose = _currentMmDevice;
+            _currentMmDevice = null;
+
+            enumeratorToDispose = _enumerator;
+            _enumerator = null;
+        }
+
+        if (wasapiOutToDispose != null)
         {
             try
             {
-                _wasapiOut.PlaybackStopped -= OnPlaybackStopped;
-                _wasapiOut.Dispose();
+                wasapiOutToDispose.Stop();
             }
             catch { }
-            _wasapiOut = null;
+
+            try
+            {
+                wasapiOutToDispose.Dispose();
+            }
+            catch { }
         }
 
-        if (_currentMmDevice != null)
-        {
-            try { _currentMmDevice.Dispose(); } catch { }
-            _currentMmDevice = null;
-        }
-
-        if (_enumerator != null)
-        {
-            try { _enumerator.Dispose(); } catch { }
-            _enumerator = null;
-        }
+        try { deviceToDispose?.Dispose(); } catch { }
+        try { enumeratorToDispose?.Dispose(); } catch { }
     }
 
     public void Dispose()
     {
         lock (_stateLock)
         {
-            if (!_isDisposed)
-            {
-                _isDisposed = true;
-                CleanupResources();
-            }
+            if (_isDisposed) return;
+            _isDisposed = true;
         }
+        CleanupResources();
     }
 
     /// <summary>

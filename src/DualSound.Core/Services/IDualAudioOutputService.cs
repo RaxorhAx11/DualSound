@@ -27,6 +27,11 @@ public interface IDualAudioOutputService : IDisposable
     /// </summary>
     void FeedCapturedAudio(ReadOnlySpan<float> canonicalStereoSamples);
 
+    /// <summary>
+    /// Feeds audio specifically to one branch (e.g. for isolated test tones).
+    /// </summary>
+    void FeedBranchAudio(AudioOutputBranch branch, ReadOnlySpan<float> canonicalStereoSamples);
+
     void ApplySettings(AppSettings settings);
 
     event EventHandler<AudioEngineState>? StateChanged;

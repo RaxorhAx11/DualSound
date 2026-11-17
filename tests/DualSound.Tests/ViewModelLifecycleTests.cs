@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using DualSound.App.Services;
 using DualSound.App.ViewModels;
@@ -6,7 +7,9 @@ using DualSound.Audio.Capture;
 using DualSound.Audio.Engine;
 using DualSound.Audio.Output;
 using DualSound.Audio.Presets;
+using DualSound.Audio.Routing;
 using DualSound.Audio.Sync;
+using DualSound.Contracts.Enums;
 using DualSound.Core.Services;
 using DualSound.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +38,7 @@ public class ViewModelLifecycleTests
         services.AddSingleton<IAudioSyncManager, AudioSyncManager>();
         services.AddSingleton<IDualAudioOutputService, DualAudioOutputService>();
         services.AddSingleton<IAudioPresetService, AudioPresetService>();
+        services.AddSingleton<ISystemAudioRoutingService, SystemAudioRoutingService>();
         services.AddSingleton<IAudioEngineService, AudioEngineService>();
 
         services.AddSingleton<MainViewModel>();
@@ -44,6 +48,7 @@ public class ViewModelLifecycleTests
         services.AddTransient<EqualizerViewModel>();
         services.AddTransient<SynchronizationViewModel>();
         services.AddTransient<SettingsViewModel>();
+        services.AddTransient<SetupWizardViewModel>();
 
         _serviceProvider = services.BuildServiceProvider();
     }
@@ -175,6 +180,65 @@ public class ViewModelLifecycleTests
         Assert.Equal("Ready", routingVm.CaptureStatusText);
         Assert.True(routingVm.CanStartCapture);
         Assert.False(routingVm.CanStopCapture);
+    }
+
+    [Fact]
+    public async Task SetupWizardViewModel_NavigatesThroughSteps_AndSavesSettings()
+    {
+        var wizardVm = _serviceProvider.GetRequiredService<SetupWizardViewModel>();
+        Assert.NotNull(wizardVm);
+        Assert.Equal(1, wizardVm.CurrentStep);
+
+        // Step 1 -> Step 2
+        await wizardVm.NextStepAsync();
+        Assert.Equal(2, wizardVm.CurrentStep);
+
+        // Step 2 -> Step 3
+        await wizardVm.NextStepAsync();
+        Assert.Equal(3, wizardVm.CurrentStep);
+
+        // Step 3 -> Step 2 (Back)
+        wizardVm.PreviousStep();
+        Assert.Equal(2, wizardVm.CurrentStep);
+
+        // Step 2 -> 7
+        for (int i = 2; i < 7; i++)
+        {
+            await wizardVm.NextStepAsync();
+        }
+        Assert.Equal(7, wizardVm.CurrentStep);
+
+        // Complete setup
+        await wizardVm.CompleteSetupAsync();
+        var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
+        Assert.True(settingsService.CurrentSettings.IsSetupWizardCompleted);
+    }
+
+    [Fact]
+    public void DashboardViewModel_LaunchSetupWizard_NavigatesToSetupWizard()
+    {
+        var navService = _serviceProvider.GetRequiredService<INavigationService>();
+        var dashboardVm = _serviceProvider.GetRequiredService<DashboardViewModel>();
+
+        dashboardVm.LaunchSetupWizard();
+        Assert.NotNull(navService.CurrentViewModel);
+        Assert.IsType<SetupWizardViewModel>(navService.CurrentViewModel);
+
+        var wizardVm = (SetupWizardViewModel)navService.CurrentViewModel;
+        wizardVm.ExitWizard();
+        Assert.IsType<DashboardViewModel>(navService.CurrentViewModel);
+    }
+
+    [Fact]
+    public async Task AudioEngineService_StopAsync_TransitionsCleanlyWithoutDeadlock()
+    {
+        var engine = _serviceProvider.GetRequiredService<IAudioEngineService>();
+        
+        // Ensure StopAsync completes within 2 seconds (verifies absence of thread deadlock)
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        await engine.StopAsync(cts.Token);
+
+        Assert.Equal(AudioEngineState.Stopped, engine.State);
     }
 
     private sealed class TestDispatcherService : IDispatcherService

@@ -20,7 +20,7 @@ public sealed class BassProcessor
     private bool _isEnabled = true;
     private float _bassGainDb = 4.0f;
     private float _crossoverFrequency = 120f;
-    private bool _lowPassEnabled = true;
+    private bool _lowPassEnabled = false;
     private bool _monoSubwooferMix = true;
 
     public bool IsEnabled

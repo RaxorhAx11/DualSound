@@ -26,6 +26,8 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
     private readonly IAudioDeviceDiscoveryService _discoveryService;
     private readonly IAudioDeviceMonitorService _monitorService;
     private readonly ISettingsService _settingsService;
+    private readonly ISystemAudioRoutingService _routingService;
+    private readonly INavigationService _navigationService;
     private readonly IDispatcherService _dispatcherService;
     private readonly ILogger<AudioRoutingViewModel> _logger;
 
@@ -161,12 +163,39 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
     [ObservableProperty]
     private string? _statusBannerMessage;
 
+    // System-Wide Routing Diagnostics
+    [ObservableProperty]
+    private SystemAudioRoutingStatus _routingStatus = new();
+
+    [ObservableProperty]
+    private bool _isDesktopAudioRoutedToVirtualCable;
+
+    [ObservableProperty]
+    private string _routingValidationSummary = "Validating Windows routing...";
+
+    [ObservableProperty]
+    private bool _isVirtualCableInstalled;
+
+    [ObservableProperty]
+    private bool _isPlayingTestTone;
+
+    [ObservableProperty]
+    private string _testToneStatus = "Ready to test";
+
+    [ObservableProperty]
+    private bool _hasBypassConditions;
+
+    [ObservableProperty]
+    private string _bypassWarningDetails = string.Empty;
+
     public AudioRoutingViewModel(
         IAudioEngineService audioEngine,
         IAudioCapture captureEngine,
         IAudioDeviceDiscoveryService discoveryService,
         IAudioDeviceMonitorService monitorService,
         ISettingsService settingsService,
+        ISystemAudioRoutingService routingService,
+        INavigationService navigationService,
         IDispatcherService dispatcherService,
         ILogger<AudioRoutingViewModel> logger)
     {
@@ -175,6 +204,8 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
         _discoveryService = discoveryService;
         _monitorService = monitorService;
         _settingsService = settingsService;
+        _routingService = routingService;
+        _navigationService = navigationService;
         _dispatcherService = dispatcherService;
         _logger = logger;
 
@@ -195,6 +226,7 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
         _captureEngine.CaptureError += OnCaptureError;
         _monitorService.DeviceChanged += OnAudioDeviceChanged;
         _audioEngine.StateChanged += OnEngineStateChanged;
+        _routingService.RoutingStatusChanged += OnRoutingStatusChanged;
 
         _ = RefreshAllDevicesAsync();
     }
@@ -259,6 +291,10 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
                                             AvailablePlaybackDevices.FirstOrDefault(d => d.DeviceType is AudioDeviceType.LineOut35mm or AudioDeviceType.Headphones or AudioDeviceType.Speakers && d.IsActive) ??
                                             AvailablePlaybackDevices.FirstOrDefault();
             });
+
+            // Refresh system-wide audio routing verification
+            var routing = await _routingService.ValidateRoutingAsync();
+            UpdateRoutingUi(routing);
         }
         catch (Exception ex)
         {
@@ -443,6 +479,81 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
         });
     }
 
+    private void OnRoutingStatusChanged(object? sender, SystemAudioRoutingStatus e)
+    {
+        UpdateRoutingUi(e);
+    }
+
+    private void UpdateRoutingUi(SystemAudioRoutingStatus routing)
+    {
+        _dispatcherService.Invoke(() =>
+        {
+            RoutingStatus = routing;
+            IsDesktopAudioRoutedToVirtualCable = routing.IsDesktopAudioRoutedToVirtualCable;
+            IsVirtualCableInstalled = routing.DetectedVirtualCable?.IsInstalled == true;
+            RoutingValidationSummary = routing.StatusSummary;
+            HasBypassConditions = routing.HasBypassConditions;
+            BypassWarningDetails = routing.BypassDetails ?? string.Empty;
+        });
+    }
+
+    [RelayCommand]
+    public void OpenWindowsSoundSettings()
+    {
+        _routingService.OpenWindowsSoundSettings();
+    }
+
+    [RelayCommand]
+    public void LaunchSetupWizard()
+    {
+        _navigationService.NavigateTo<SetupWizardViewModel>();
+    }
+
+    [RelayCommand]
+    public async Task ValidateRoutingAsync()
+    {
+        var status = await _routingService.ValidateRoutingAsync();
+        UpdateRoutingUi(status);
+    }
+
+    [RelayCommand]
+    public async Task TestTvToneAsync()
+    {
+        IsPlayingTestTone = true;
+        TestToneStatus = "Testing TV (HDMI)...";
+        await _routingService.PlayTestToneAsync(AudioOutputBranch.TvHdmi, 3.0f, 0.20f);
+        IsPlayingTestTone = false;
+        TestToneStatus = "Test finished";
+    }
+
+    [RelayCommand]
+    public async Task TestHomeTheatreToneAsync()
+    {
+        IsPlayingTestTone = true;
+        TestToneStatus = "Testing Home Theatre (3.5 mm)...";
+        await _routingService.PlayTestToneAsync(AudioOutputBranch.HomeTheatre35mm, 3.0f, 0.20f);
+        IsPlayingTestTone = false;
+        TestToneStatus = "Test finished";
+    }
+
+    [RelayCommand]
+    public async Task TestBothTonesAsync()
+    {
+        IsPlayingTestTone = true;
+        TestToneStatus = "Testing both TV & Home Theatre...";
+        await _routingService.PlayTestToneAsync(null, 3.0f, 0.20f);
+        IsPlayingTestTone = false;
+        TestToneStatus = "Test finished";
+    }
+
+    [RelayCommand]
+    public void StopTestTone()
+    {
+        _routingService.StopTestTone();
+        IsPlayingTestTone = false;
+        TestToneStatus = "Test stopped";
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
@@ -452,6 +563,8 @@ public sealed partial class AudioRoutingViewModel : ViewModelBase
             _captureEngine.CaptureError -= OnCaptureError;
             _monitorService.DeviceChanged -= OnAudioDeviceChanged;
             _audioEngine.StateChanged -= OnEngineStateChanged;
+            _routingService.RoutingStatusChanged -= OnRoutingStatusChanged;
+            StopTestTone();
         }
         base.Dispose(disposing);
     }

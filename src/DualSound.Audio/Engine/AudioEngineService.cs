@@ -89,6 +89,9 @@ public sealed class AudioEngineService : IAudioEngineService
         {
             _logger.LogInformation("Starting DualSound master audio engine...");
 
+            // Ensure any prior streams are stopped cleanly before starting
+            await StopInternalAsync(cancellationToken);
+
             // 1. Sync settings to output branches
             _outputService.ApplySettings(_settingsService.CurrentSettings);
 
@@ -117,15 +120,11 @@ public sealed class AudioEngineService : IAudioEngineService
         lock (_stateLock)
         {
             if (_state is AudioEngineState.Stopped) return;
+            SetState(AudioEngineState.Stopped);
         }
 
         _logger.LogInformation("Stopping DualSound master audio engine...");
         await StopInternalAsync(cancellationToken);
-
-        lock (_stateLock)
-        {
-            SetState(AudioEngineState.Stopped);
-        }
 
         _logger.LogInformation("DualSound master audio engine stopped");
     }

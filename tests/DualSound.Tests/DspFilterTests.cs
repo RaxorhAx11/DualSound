@@ -166,6 +166,29 @@ public class DspFilterTests
     }
 
     [Fact]
+    public void BassProcessor_FreshInstanceDefaultsToFullRange_NeverMutesDialogue()
+    {
+        // Unconfigured instance must not accidentally low-pass dialogue frequencies
+        var bass = new BassProcessor(SampleRate);
+
+        // 2 kHz speech formant tone
+        var buffer = new float[960];
+        for (int i = 0; i < buffer.Length; i += 2)
+        {
+            float val = 0.5f * (float)Math.Sin(2 * Math.PI * 2000 * (i / 2) / SampleRate);
+            buffer[i] = val;
+            buffer[i + 1] = val;
+        }
+
+        var peakBefore = GetPeak(buffer);
+        bass.Process(buffer.AsSpan());
+        var peakAfter = GetPeak(buffer);
+
+        // Speech frequencies must remain unattenuated
+        Assert.True(peakAfter > 0.45f, $"Expected peak > 0.45, got {peakAfter}");
+    }
+
+    [Fact]
     public void BassProcessor_DefaultFullRange_PassesDialogueAndHighFrequencies()
     {
         var bass = new BassProcessor(SampleRate);

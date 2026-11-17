@@ -102,6 +102,12 @@ public sealed partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    public void LaunchSetupWizard()
+    {
+        _navigationService.NavigateTo<SetupWizardViewModel>();
+    }
+
+    [RelayCommand]
     private void DismissNotification()
     {
         DeviceEventNotification = null;

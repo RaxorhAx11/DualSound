@@ -77,7 +77,7 @@ public sealed partial class EqualizerViewModel : ViewModelBase
     private float _bassCrossoverFrequency = 120f;
 
     [ObservableProperty]
-    private bool _isLowPassFilterEnabled = true;
+    private bool _isLowPassFilterEnabled = false;
 
     [ObservableProperty]
     private bool _isMonoSubwooferMix = true;

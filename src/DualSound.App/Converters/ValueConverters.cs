@@ -8,14 +8,16 @@ using DualSound.Contracts.Enums;
 namespace DualSound.App.Converters;
 
 /// <summary>
-/// Converts boolean to Visibility, with optional invert parameter.
+/// Converts boolean to Visibility, with optional invert parameter or property.
 /// </summary>
 public sealed class BoolToVisibilityConverter : IValueConverter
 {
+    public bool IsInverted { get; set; }
+
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var boolValue = value is bool b && b;
-        var invert = parameter is string s && s.Equals("Inverse", StringComparison.OrdinalIgnoreCase);
+        var invert = IsInverted || (parameter is string s && s.Equals("Inverse", StringComparison.OrdinalIgnoreCase));
 
         if (invert)
         {
@@ -29,6 +31,55 @@ public sealed class BoolToVisibilityConverter : IValueConverter
     {
         return value is Visibility v && v == Visibility.Visible;
     }
+}
+
+/// <summary>
+/// Compares integer step value with ConverterParameter (e.g. "1", "2") and returns Visibility.
+/// </summary>
+public sealed class StepToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int currentStep && parameter != null && int.TryParse(parameter.ToString(), out int targetStep))
+        {
+            return currentStep == targetStep ? Visibility.Visible : Visibility.Collapsed;
+        }
+        return Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>
+/// Highlights the step indicator circle if currentStep >= stepNumber.
+/// </summary>
+public sealed class StepToBrushConverter : IValueConverter
+{
+    private static readonly SolidColorBrush CompletedBrush = new(Color.FromRgb(59, 130, 246)); // Accent Blue
+    private static readonly SolidColorBrush ActiveBrush = new(Color.FromRgb(16, 185, 129));    // Success Green
+    private static readonly SolidColorBrush InactiveBrush = new(Color.FromRgb(39, 51, 73));   // Surface Border
+
+    static StepToBrushConverter()
+    {
+        CompletedBrush.Freeze();
+        ActiveBrush.Freeze();
+        InactiveBrush.Freeze();
+    }
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int currentStep && parameter != null && int.TryParse(parameter.ToString(), out int stepIndex))
+        {
+            if (currentStep == stepIndex) return ActiveBrush;
+            if (currentStep > stepIndex) return CompletedBrush;
+            return InactiveBrush;
+        }
+        return InactiveBrush;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
 }
 
 /// <summary>

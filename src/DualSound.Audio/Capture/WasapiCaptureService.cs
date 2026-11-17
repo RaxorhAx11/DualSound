@@ -230,20 +230,45 @@ public sealed class WasapiCaptureService : IAudioCapture
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Specified capture device ID {DeviceId} could not be opened, falling back to default", targetId);
+                _logger.LogWarning(ex, "Specified capture device ID {DeviceId} could not be opened", targetId);
+            }
+
+            if (targetDevice == null)
+            {
+                throw new InvalidOperationException(
+                    $"Configured audio capture endpoint '{targetId}' could not be opened or is disconnected.");
             }
         }
-
-        if (targetDevice == null)
+        else
         {
+            // Auto-detect Virtual Audio Cable Output if available
             try
             {
-                targetDevice = _enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia) ??
-                               _enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
+                var endpoints = _enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active);
+                foreach (MMDevice ep in endpoints)
+                {
+                    if (ep.FriendlyName.Contains("CABLE Output", StringComparison.OrdinalIgnoreCase) ||
+                        ep.FriendlyName.Contains("VB-Audio", StringComparison.OrdinalIgnoreCase))
+                    {
+                        targetDevice = ep;
+                        _logger.LogInformation("Auto-detected Virtual Cable recording endpoint: {DeviceName}", ep.FriendlyName);
+                        break;
+                    }
+                }
             }
-            catch (Exception ex)
+            catch { }
+
+            if (targetDevice == null)
             {
-                throw new InvalidOperationException("No Windows audio recording endpoint is available.", ex);
+                try
+                {
+                    targetDevice = _enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia) ??
+                                   _enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("No Windows audio recording endpoint is available.", ex);
+                }
             }
         }
 

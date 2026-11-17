@@ -27,6 +27,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
     private readonly IAudioDeviceDiscoveryService _discoveryService;
     private readonly IAudioDeviceMonitorService _monitorService;
     private readonly ISettingsService _settingsService;
+    private readonly ISystemAudioRoutingService _routingService;
     private readonly INavigationService _navigationService;
     private readonly IDispatcherService _dispatcherService;
     private readonly ILogger<DashboardViewModel> _logger;
@@ -121,6 +122,13 @@ public sealed partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private string _formattedHomeTheatrePeak = "-60.0 dB";
 
+    // System Routing Diagnostic Banner
+    [ObservableProperty]
+    private bool _showRoutingWarning;
+
+    [ObservableProperty]
+    private string _routingWarningMessage = string.Empty;
+
     public IReadOnlyList<AudioPreset> Presets => _presetService.AvailablePresets;
 
     public DashboardViewModel(
@@ -129,6 +137,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
         IAudioDeviceDiscoveryService discoveryService,
         IAudioDeviceMonitorService monitorService,
         ISettingsService settingsService,
+        ISystemAudioRoutingService routingService,
         INavigationService navigationService,
         IDispatcherService dispatcherService,
         ILogger<DashboardViewModel> logger)
@@ -138,6 +147,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
         _discoveryService = discoveryService;
         _monitorService = monitorService;
         _settingsService = settingsService;
+        _routingService = routingService;
         _navigationService = navigationService;
         _dispatcherService = dispatcherService;
         _logger = logger;
@@ -162,6 +172,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
         _audioEngine.EngineError += OnEngineError;
         _presetService.PresetChanged += OnPresetChanged;
         _monitorService.DeviceChanged += OnAudioDeviceChanged;
+        _routingService.RoutingStatusChanged += OnRoutingStatusChanged;
 
         // Decoupled 30 Hz VU metering timer
         _meterTimer = new Timer(OnMeterTimerTick, null, 33, 33);
@@ -254,6 +265,10 @@ public sealed partial class DashboardViewModel : ViewModelBase
                 UpdateAnalogStatus();
             });
 
+            // Diagnostic check for system-wide desktop routing
+            var routingStatus = await _routingService.ValidateRoutingAsync();
+            UpdateRoutingBanner(routingStatus);
+
             _logger.LogInformation("Dashboard loaded successfully with {Count} audio endpoints", devices.Count);
         }
         catch (Exception ex)
@@ -271,6 +286,8 @@ public sealed partial class DashboardViewModel : ViewModelBase
     [RelayCommand]
     public async Task ToggleEngineAsync()
     {
+        if (_audioEngine.State == AudioEngineState.Initializing) return;
+
         ClearError();
         try
         {
@@ -280,21 +297,27 @@ public sealed partial class DashboardViewModel : ViewModelBase
             }
             else
             {
+                var settings = _settingsService.CurrentSettings;
+                if (settings.TvBranch == null) settings.TvBranch = new(AudioOutputBranch.TvHdmi);
+                if (settings.HomeTheatreBranch == null) settings.HomeTheatreBranch = new(AudioOutputBranch.HomeTheatre35mm);
+
                 // Ensure output devices are assigned in settings before starting
                 if (SelectedHdmiDevice != null)
                 {
-                    _settingsService.CurrentSettings.PreferredPrimaryDeviceId = SelectedHdmiDevice.Id;
-                    _settingsService.CurrentSettings.TvBranch.DeviceId = SelectedHdmiDevice.Id;
+                    settings.PreferredPrimaryDeviceId = SelectedHdmiDevice.Id;
+                    settings.TvBranch.DeviceId = SelectedHdmiDevice.Id;
+                    settings.TvBranch.DeviceName = SelectedHdmiDevice.Name;
                     _audioEngine.OutputService.TvBranch.SetDevice(SelectedHdmiDevice.Id);
                 }
                 if (SelectedAnalogDevice != null)
                 {
-                    _settingsService.CurrentSettings.PreferredSecondaryDeviceId = SelectedAnalogDevice.Id;
-                    _settingsService.CurrentSettings.HomeTheatreBranch.DeviceId = SelectedAnalogDevice.Id;
+                    settings.PreferredSecondaryDeviceId = SelectedAnalogDevice.Id;
+                    settings.HomeTheatreBranch.DeviceId = SelectedAnalogDevice.Id;
+                    settings.HomeTheatreBranch.DeviceName = SelectedAnalogDevice.Name;
                     _audioEngine.OutputService.HomeTheatreBranch.SetDevice(SelectedAnalogDevice.Id);
                 }
 
-                await _settingsService.SaveSettingsAsync(_settingsService.CurrentSettings);
+                await _settingsService.SaveSettingsAsync(settings);
                 await _audioEngine.StartAsync();
             }
         }
@@ -524,6 +547,40 @@ public sealed partial class DashboardViewModel : ViewModelBase
         });
     }
 
+    private void OnRoutingStatusChanged(object? sender, SystemAudioRoutingStatus e)
+    {
+        UpdateRoutingBanner(e);
+    }
+
+    private void UpdateRoutingBanner(SystemAudioRoutingStatus routing)
+    {
+        _dispatcherService.Invoke(() =>
+        {
+            if (!routing.IsDesktopAudioRoutedToVirtualCable)
+            {
+                ShowRoutingWarning = true;
+                RoutingWarningMessage = $"Windows default output is '{routing.WindowsDefaultPlaybackDevice?.Name ?? "Speakers"}'. Desktop audio is bypassing DualSound until routed to '{routing.DetectedVirtualCable?.PlaybackDevice?.Name ?? "CABLE Input"}'.";
+            }
+            else
+            {
+                ShowRoutingWarning = false;
+                RoutingWarningMessage = string.Empty;
+            }
+        });
+    }
+
+    [RelayCommand]
+    public void LaunchSetupWizard()
+    {
+        _navigationService.NavigateTo<SetupWizardViewModel>();
+    }
+
+    [RelayCommand]
+    public void OpenWindowsSoundSettings()
+    {
+        _routingService.OpenWindowsSoundSettings();
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
@@ -532,6 +589,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
             _audioEngine.EngineError -= OnEngineError;
             _presetService.PresetChanged -= OnPresetChanged;
             _monitorService.DeviceChanged -= OnAudioDeviceChanged;
+            _routingService.RoutingStatusChanged -= OnRoutingStatusChanged;
             _meterTimer?.Dispose();
         }
         base.Dispose(disposing);
