@@ -16,6 +16,12 @@ public interface IAudioSyncManager : IDisposable
     void SetDelay(AudioOutputBranch branch, float delayMs);
 
     /// <summary>
+    /// Smoothly nudges delay in milliseconds for a branch (e.g. for clock drift correction)
+    /// maintaining seamless audio continuity without audible clicks or pops.
+    /// </summary>
+    void AdjustDelaySmoothly(AudioOutputBranch branch, float deltaMs);
+
+    /// <summary>
     /// Gets current configured delay in milliseconds for a branch.
     /// </summary>
     float GetDelay(AudioOutputBranch branch);

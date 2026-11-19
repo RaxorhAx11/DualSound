@@ -88,7 +88,8 @@ public sealed partial class MainViewModel : ViewModelBase
         NavigationItems.Add(new NavigationItem("Audio Devices", "IconDevices", typeof(AudioDevicesViewModel)));
         NavigationItems.Add(new NavigationItem("Audio Routing", "IconRouting", typeof(AudioRoutingViewModel)));
         NavigationItems.Add(new NavigationItem("Equalizer", "IconEqualizer", typeof(EqualizerViewModel)));
-        NavigationItems.Add(new NavigationItem("Synchronization", "IconSync", typeof(SynchronizationViewModel)));
+        NavigationItems.Add(new NavigationItem("Manual Sync", "IconSync", typeof(SynchronizationViewModel)));
+        NavigationItems.Add(new NavigationItem("Auto Calibration", "IconMicrophone", typeof(AutomaticSyncViewModel)));
         NavigationItems.Add(new NavigationItem("Settings", "IconSettings", typeof(SettingsViewModel)));
     }
 

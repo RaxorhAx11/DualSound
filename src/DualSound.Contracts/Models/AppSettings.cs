@@ -137,6 +137,36 @@ public sealed class AppSettings
     public bool ShowRoutingWarningBanner { get; set; } = true;
 
     /// <summary>
+    /// Enables continuous background detection and smooth micro-correction of clock drift between TV and Home Theatre DACs.
+    /// </summary>
+    public bool IsLiveSyncMonitoringEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Timing drift tolerance threshold in milliseconds before Live Sync Monitoring applies smooth correction.
+    /// </summary>
+    public float LiveSyncToleranceMs { get; set; } = 2.0f;
+
+    /// <summary>
+    /// Selected microphone endpoint ID for acoustic sync calibration.
+    /// </summary>
+    public string? SelectedCalibrationMicrophoneId { get; set; }
+
+    /// <summary>
+    /// UTC timestamp of the last successful acoustic calibration.
+    /// </summary>
+    public DateTime? LastCalibrationTimeUtc { get; set; }
+
+    /// <summary>
+    /// Confidence score (0.0 to 1.0) of the last acoustic calibration.
+    /// </summary>
+    public float? LastCalibrationConfidence { get; set; }
+
+    /// <summary>
+    /// Measured acoustic time-of-flight difference in milliseconds from the last calibration.
+    /// </summary>
+    public float? LastMeasuredDifferenceMs { get; set; }
+
+    /// <summary>
     /// Minimum logging level persisted.
     /// </summary>
     public string MinimumLogLevel { get; set; } = "Information";

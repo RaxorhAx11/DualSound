@@ -30,6 +30,9 @@
         <DataTemplate DataType="{x:Type vm:SynchronizationViewModel}">
             <views:SynchronizationView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:AutomaticSyncViewModel}">
+            <views:AutomaticSyncView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
             <views:SettingsView />
         </DataTemplate>

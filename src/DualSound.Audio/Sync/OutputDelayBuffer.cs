@@ -32,6 +32,11 @@ public sealed class OutputDelayBuffer
     private long _overruns = 0;
     private long _driftSamples = 0;
 
+    // Smooth crossfade state for click-free live delay adjustments
+    private int _fadeRemainingFrames = 0;
+    private int _fadeTotalFrames = 0;
+    private int _fadeOldReadIndex = 0;
+
     public AudioOutputBranch Branch => _branch;
     public float TargetDelayMs => _targetDelayMs;
     public long UnderrunCount => Interlocked.Read(ref _underruns);
@@ -66,7 +71,7 @@ public sealed class OutputDelayBuffer
 
     /// <summary>
     /// Sets the desired synchronization delay in milliseconds (0 ms to 500 ms).
-    /// Immediately trims accumulated buffer samples if reducing delay to prevent latency lag.
+    /// Safe to call during active playback; transitions delay smoothly with raised-cosine crossfade.
     /// </summary>
     public void SetDelayMilliseconds(float delayMs)
     {
@@ -85,11 +90,28 @@ public sealed class OutputDelayBuffer
                 if (_availableSamples > desiredAvailable)
                 {
                     int drop = _availableSamples - desiredAvailable;
+                    int oldRead = _readIndex;
                     _readIndex = (_readIndex + drop) % _capacitySamples;
                     _availableSamples = desiredAvailable;
+
+                    // Smooth crossfade to prevent pops and clicks during live playback
+                    if (_availableSamples > 0 && Interlocked.Read(ref _totalFramesRead) > 0)
+                    {
+                        _fadeOldReadIndex = oldRead;
+                        _fadeTotalFrames = Math.Min(96, Math.Max(16, drop / _channels));
+                        _fadeRemainingFrames = _fadeTotalFrames;
+                    }
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Smoothly adjusts delay by delta in milliseconds, strictly clamped between 0 and 500 ms.
+    /// </summary>
+    public void AdjustDelaySmoothly(float deltaMs)
+    {
+        SetDelayMilliseconds(_targetDelayMs + deltaMs);
     }
 
     /// <summary>
@@ -182,6 +204,32 @@ public sealed class OutputDelayBuffer
             _availableSamples -= samplesToRead;
             Interlocked.Add(ref _totalFramesRead, samplesToRead / _channels);
 
+            // Apply smooth crossfade to eliminate pops and clicks if delay transition is active
+            if (_fadeRemainingFrames > 0 && samplesToRead > 0)
+            {
+                int framesInRead = samplesToRead / _channels;
+                int framesToFade = Math.Min(_fadeRemainingFrames, framesInRead);
+
+                for (int f = 0; f < framesToFade; f++)
+                {
+                    float t = 1.0f - ((float)_fadeRemainingFrames / _fadeTotalFrames);
+                    // Raised-cosine crossfade: 0.5 * (1 - cos(pi * t))
+                    float wNew = 0.5f * (1.0f - MathF.Cos(MathF.PI * t));
+                    float wOld = 1.0f - wNew;
+
+                    int bufBase = f * _channels;
+                    for (int c = 0; c < _channels; c++)
+                    {
+                        float oldSample = _buffer[(_fadeOldReadIndex + c) % _capacitySamples];
+                        float newSample = outputBuffer[bufBase + c];
+                        outputBuffer[bufBase + c] = (wOld * oldSample) + (wNew * newSample);
+                    }
+
+                    _fadeOldReadIndex = (_fadeOldReadIndex + _channels) % _capacitySamples;
+                    _fadeRemainingFrames--;
+                }
+            }
+
             // If requested more samples than were playable, pad the remainder with silence
             if (samplesToRead < requestedSamples)
             {
@@ -209,6 +257,9 @@ public sealed class OutputDelayBuffer
             _writeIndex = 0;
             _readIndex = 0;
             _availableSamples = 0;
+            _fadeRemainingFrames = 0;
+            _fadeTotalFrames = 0;
+            _fadeOldReadIndex = 0;
             Interlocked.Exchange(ref _underruns, 0);
             Interlocked.Exchange(ref _overruns, 0);
             Interlocked.Exchange(ref _driftSamples, 0);

@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using DualSound.App.Services;
 using DualSound.App.ViewModels;
+using DualSound.Audio.Calibration;
 using DualSound.Audio.Capture;
 using DualSound.Audio.Engine;
 using DualSound.Audio.Output;
@@ -124,6 +125,8 @@ public partial class App : Application
         services.AddSingleton<IAudioPresetService, AudioPresetService>();
         services.AddSingleton<ISystemAudioRoutingService, SystemAudioRoutingService>();
         services.AddSingleton<IAudioEngineService, AudioEngineService>();
+        services.AddSingleton<IAcousticCalibrationService, AcousticCalibrationService>();
+        services.AddSingleton<ILiveSyncMonitoringService, LiveSyncMonitoringService>();
 
         // ViewModels
         services.AddSingleton<MainViewModel>();
@@ -132,6 +135,7 @@ public partial class App : Application
         services.AddTransient<AudioRoutingViewModel>();
         services.AddTransient<EqualizerViewModel>();
         services.AddTransient<SynchronizationViewModel>();
+        services.AddTransient<AutomaticSyncViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<SetupWizardViewModel>();
 

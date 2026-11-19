@@ -20,6 +20,7 @@ public sealed partial class SynchronizationViewModel : ViewModelBase
     private readonly IAudioSyncManager _syncManager;
     private readonly ISettingsService _settingsService;
     private readonly IDispatcherService _dispatcherService;
+    private readonly INavigationService _navigationService;
     private readonly ILogger<SynchronizationViewModel> _logger;
 
     private Timer? _telemetryTimer;
@@ -66,12 +67,14 @@ public sealed partial class SynchronizationViewModel : ViewModelBase
         IAudioSyncManager syncManager,
         ISettingsService settingsService,
         IDispatcherService dispatcherService,
+        INavigationService navigationService,
         ILogger<SynchronizationViewModel> logger)
     {
         _audioEngine = audioEngine;
         _syncManager = syncManager;
         _settingsService = settingsService;
         _dispatcherService = dispatcherService;
+        _navigationService = navigationService;
         _logger = logger;
 
         Title = "Synchronization";
@@ -160,7 +163,7 @@ public sealed partial class SynchronizationViewModel : ViewModelBase
     {
         if (float.TryParse(deltaStr, out float delta))
         {
-            TvDelayMs = Math.Clamp(TvDelayMs + delta, 0f, 500f);
+            TvDelayMs = Math.Clamp(MathF.Round(TvDelayMs + delta), 0f, 500f);
         }
     }
 
@@ -169,8 +172,14 @@ public sealed partial class SynchronizationViewModel : ViewModelBase
     {
         if (float.TryParse(deltaStr, out float delta))
         {
-            HomeTheatreDelayMs = Math.Clamp(HomeTheatreDelayMs + delta, 0f, 500f);
+            HomeTheatreDelayMs = Math.Clamp(MathF.Round(HomeTheatreDelayMs + delta), 0f, 500f);
         }
+    }
+
+    [RelayCommand]
+    public void NavigateToAutoSync()
+    {
+        _navigationService.NavigateTo<AutomaticSyncViewModel>();
     }
 
     private void OnEngineStateChanged(object? sender, AudioEngineState state)

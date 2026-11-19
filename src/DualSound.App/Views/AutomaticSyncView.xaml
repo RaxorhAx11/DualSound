@@ -1,0 +1,305 @@
+<UserControl x:Class="DualSound.App.Views.AutomaticSyncView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:vm="clr-namespace:DualSound.App.ViewModels"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance vm:AutomaticSyncViewModel}"
+             d:DesignHeight="780" d:DesignWidth="1020">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="24,18" VerticalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 1. Header with Mode Switch -->
+            <Grid Grid.Row="0" Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Automatic Sync Calibration" FontSize="22" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" />
+                        <Border Background="{StaticResource BrushAccentMuted}" CornerRadius="12" Padding="10,3" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="ACOUSTIC MEASUREMENT" Foreground="#93C5FD" FontSize="11" FontWeight="Bold" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="Measure actual acoustic sound arrival at your listening location using your microphone" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource OutlineButton}" Command="{Binding NavigateToManualSyncCommand}" Height="34" Padding="14,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="{StaticResource IconSync}" Fill="{StaticResource BrushTextPrimary}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Manual Sync Controls..." VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- 2. Listening Position & Acoustic Notice Banner -->
+            <Border Grid.Row="1" Background="{StaticResource BrushCardBackground}" BorderBrush="{StaticResource BrushSurfaceBorder}" BorderThickness="1" CornerRadius="8" Padding="16,12" Margin="0,0,0,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Background="{StaticResource BrushAccentMuted}" CornerRadius="20" Width="36" Height="36" Margin="0,0,14,0" VerticalAlignment="Center">
+                        <Path Data="{StaticResource IconMicrophone}" Fill="{StaticResource BrushAccent}" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                    </Border>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="Listening Position Setup &amp; Acoustic Verification" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" />
+                        <TextBlock Text="1. Position yourself at your normal listening location and hold your microphone steady at ear level." FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,1" />
+                        <TextBlock Text="2. Ensure the room is quiet during calibration chirps. Acoustic measurements capture real sound in the air, bypassing software driver assumptions." FontSize="12" Foreground="{StaticResource BrushTextMuted}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 3. Microphone Selection & Privacy Card -->
+            <Border Grid.Row="2" Style="{StaticResource CardPanel}" Padding="18,14" Margin="0,0,0,14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="CALIBRATION MICROPHONE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Command="{Binding RefreshMicrophonesCommand}" Style="{StaticResource OutlineButton}" Height="26" Padding="8,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconRefresh}" Fill="{StaticResource BrushTextPrimary}" Width="10" Height="10" Stretch="Uniform" Margin="0,0,6,0" />
+                                <TextBlock Text="Refresh Mics" FontSize="11" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- Device Selector -->
+                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" ItemsSource="{Binding AvailableMicrophones}" SelectedItem="{Binding SelectedMicrophone, Mode=TwoWay}" DisplayMemberPath="Name" Height="34" VerticalContentAlignment="Center" />
+                        <Border Grid.Column="1" Margin="10,0,0,0" Padding="10,6" Background="{StaticResource BrushCardBackgroundHover}" CornerRadius="6" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding MicrophoneStatusText}" FontSize="11" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" />
+                        </Border>
+                    </Grid>
+
+                    <!-- Privacy Permission Warning Banner (if access is blocked) -->
+                    <Border Grid.Row="2" Background="#3B1219" BorderBrush="#DC2626" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,4,0,0"
+                            Visibility="{Binding IsMicrophoneAccessDenied, Converter={StaticResource BoolToVis}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Path Grid.Column="0" Data="{StaticResource IconWarning}" Fill="#EF4444" Width="14" Height="14" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Windows Microphone Access Denied" FontWeight="SemiBold" Foreground="#FCA5A5" FontSize="12" />
+                                <TextBlock Text="Windows Privacy Settings are blocking microphone access. Open Windows Settings and allow desktop apps to access your microphone." Foreground="#FECACA" FontSize="11" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <Button Grid.Column="2" Content="Open Privacy Settings" Command="{Binding OpenMicrophonePrivacySettingsCommand}" Style="{StaticResource OutlineButton}" Height="28" Padding="10,0" Margin="10,0,0,0" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- 4. Calibration Execution & Measurement Card -->
+            <Border Grid.Row="3" Style="{StaticResource CardPanel}" Padding="20,16" Margin="0,0,0,14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Card Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="ACOUSTIC CALIBRATION SEQUENCE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" />
+                        <Border Grid.Column="1" Background="{StaticResource BrushCardBackgroundHover}" BorderBrush="{StaticResource BrushSurfaceBorder}" BorderThickness="1" CornerRadius="6" Padding="10,4">
+                            <TextBlock Text="{Binding DelayDeltaText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushAccent}" />
+                        </Border>
+                    </Grid>
+
+                    <!-- Status Text and Progress Bar -->
+                    <StackPanel Grid.Row="1" Margin="0,0,0,14">
+                        <TextBlock Text="{Binding CalibrationStatusText}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding CalibrationDetailedMessage}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8" TextWrapping="Wrap" Visibility="{Binding CalibrationDetailedMessage, Converter={StaticResource StringToVis}}" />
+                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding CalibrationProgress}" Height="8" Background="#0F172A" Foreground="{StaticResource BrushAccent}" BorderThickness="0" />
+                    </StackPanel>
+
+                    <!-- Measured Results Display -->
+                    <Border Grid.Row="2" Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="14,10" Margin="0,0,0,14" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1"
+                            Visibility="{Binding HasCalibrationResult, Converter={StaticResource BoolToVis}}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="TV ARRIVAL" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                                    <TextBlock Text="{Binding MeasuredTvArrivalMs, StringFormat={}{0:F1} ms}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource BrushHdmi}" Margin="0,2,0,0" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="HT ARRIVAL" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                                    <TextBlock Text="{Binding MeasuredHomeTheatreArrivalMs, StringFormat={}{0:F1} ms}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource BrushAnalog}" Margin="0,2,0,0" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="ARRIVAL DIFFERENCE" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                                    <TextBlock Text="{Binding MeasuredDifferenceMs, StringFormat={}{0:+0.0;-0.0;0.0} ms}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" Margin="0,2,0,0" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="3">
+                                    <TextBlock Text="CONFIDENCE SCORE" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                                    <TextBlock Text="{Binding ConfidenceText}" FontSize="14" FontWeight="Bold" Margin="0,2,0,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                <Setter Property="Foreground" Value="{StaticResource BrushSuccess}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsConfidenceAcceptable}" Value="False">
+                                                        <Setter Property="Foreground" Value="#EF4444" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Acoustic Warning or Notice -->
+                            <TextBlock Grid.Row="1" Text="{Binding AcousticWarning}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="{Binding AcousticWarning, Converter={StaticResource StringToVis}}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Calibration Control Action Buttons -->
+                    <Grid Grid.Row="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Start Calibration -->
+                        <Button Grid.Column="0" Content="Start Calibration" Command="{Binding StartCalibrationCommand}" Style="{StaticResource AccentButton}" Height="34" Padding="16,0" Margin="0,0,8,0" IsEnabled="{Binding IsCalibrating, Converter={StaticResource InverseBool}}" />
+
+                        <!-- Stop Calibration -->
+                        <Button Grid.Column="1" Content="Stop Calibration" Command="{Binding StopCalibrationCommand}" Style="{StaticResource OutlineButton}" Height="34" Padding="14,0" IsEnabled="{Binding IsCalibrating}" />
+
+                        <!-- Verify Synchronization -->
+                        <Button Grid.Column="3" Content="Verify Synchronization" Command="{Binding VerifySynchronizationCommand}" Style="{StaticResource OutlineButton}" Height="34" Padding="14,0" Margin="0,0,8,0" IsEnabled="{Binding IsVerifying, Converter={StaticResource InverseBool}}" ToolTip="Audition both outputs together with the correction applied" />
+
+                        <!-- Restore Previous -->
+                        <Button Grid.Column="4" Content="Restore Previous Settings" Command="{Binding RestorePreviousSettingsCommand}" Style="{StaticResource OutlineButton}" Height="34" Padding="14,0" Margin="0,0,8,0" IsEnabled="{Binding CanRestorePrevious}" />
+
+                        <!-- Save Calibration -->
+                        <Button Grid.Column="5" Content="Save Calibration" Command="{Binding SaveCalibrationCommand}" Style="{StaticResource AccentButton}" Height="34" Padding="16,0" IsEnabled="{Binding CanSaveCalibration}" ToolTip="Apply and permanently commit recommended delays" />
+                    </Grid>
+
+                    <!-- Last Calibrated Footer -->
+                    <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Text="Last Successful Calibration: " FontSize="11" Foreground="{StaticResource BrushTextMuted}" />
+                        <TextBlock Text="{Binding LastCalibrationTimeText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 5. Optional Live Sync Monitoring Card -->
+            <Border Grid.Row="4" Style="{StaticResource CardPanel}" Padding="20,16" Margin="0,0,0,14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="LIVE SYNC MONITORING (ADVANCED)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                            <TextBlock Text="Continuously monitors hardware crystal clock drift and applies smooth micro-corrections during long playback sessions" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <CheckBox Grid.Column="1" Content="Enable Live Monitoring" IsChecked="{Binding IsLiveSyncEnabled, Mode=TwoWay}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" />
+                    </Grid>
+
+                    <!-- Live Sync Telemetry Grid -->
+                    <Border Grid.Row="1" Background="{StaticResource BrushSidebarBackground}" CornerRadius="6" Padding="14,10" Margin="0,6,0,8" BorderBrush="{StaticResource BrushSurfaceBorderSubtle}" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="MONITORING STATUS" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                                <TextBlock Text="{Binding LiveMonitoringStatusText}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" Margin="0,2,0,0" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="ESTIMATED CLOCK DRIFT" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                                <TextBlock Text="{Binding EstimatedDriftText}" FontSize="13" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" Margin="0,2,0,0" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="CORRECTIONS APPLIED" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" />
+                                <TextBlock Text="{Binding TotalCorrectionsText}" FontSize="13" FontWeight="Bold" Foreground="{StaticResource BrushSuccess}" Margin="0,2,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Limitation Notice (if audio engine is stopped or measurement unreliable) -->
+                    <Border Grid.Row="2" Background="#1E293B" BorderBrush="{StaticResource BrushSurfaceBorder}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,2,0,0"
+                            Visibility="{Binding DriftLimitationNotice, Converter={StaticResource StringToVis}}">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="{StaticResource IconOffline}" Fill="{StaticResource BrushTextMuted}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding DriftLimitationNotice}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                </Grid>
+            </Border>
+
+        </Grid>
+    </ScrollViewer>
+</UserControl>

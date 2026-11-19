@@ -43,6 +43,11 @@ public sealed class AudioSyncManager : IAudioSyncManager
         GetBuffer(branch).SetDelayMilliseconds(delayMs);
     }
 
+    public void AdjustDelaySmoothly(AudioOutputBranch branch, float deltaMs)
+    {
+        GetBuffer(branch).AdjustDelaySmoothly(deltaMs);
+    }
+
     public float GetDelay(AudioOutputBranch branch)
     {
         return GetBuffer(branch).TargetDelayMs;

@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DualSound.App.Services;
 using DualSound.App.ViewModels;
+using DualSound.Audio.Calibration;
 using DualSound.Audio.Capture;
 using DualSound.Audio.Engine;
 using DualSound.Audio.Output;
@@ -40,6 +41,8 @@ public class ViewModelLifecycleTests
         services.AddSingleton<IAudioPresetService, AudioPresetService>();
         services.AddSingleton<ISystemAudioRoutingService, SystemAudioRoutingService>();
         services.AddSingleton<IAudioEngineService, AudioEngineService>();
+        services.AddSingleton<IAcousticCalibrationService, AcousticCalibrationService>();
+        services.AddSingleton<ILiveSyncMonitoringService, LiveSyncMonitoringService>();
 
         services.AddSingleton<MainViewModel>();
         services.AddTransient<DashboardViewModel>();
@@ -47,6 +50,7 @@ public class ViewModelLifecycleTests
         services.AddTransient<AudioRoutingViewModel>();
         services.AddTransient<EqualizerViewModel>();
         services.AddTransient<SynchronizationViewModel>();
+        services.AddTransient<AutomaticSyncViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<SetupWizardViewModel>();
 
@@ -60,7 +64,7 @@ public class ViewModelLifecycleTests
         var mainVm = _serviceProvider.GetRequiredService<MainViewModel>();
 
         Assert.NotNull(mainVm);
-        Assert.Equal(6, mainVm.NavigationItems.Count);
+        Assert.Equal(7, mainVm.NavigationItems.Count);
 
         // Verify initial navigation to Dashboard
         Assert.IsType<DashboardViewModel>(mainVm.CurrentView);
@@ -83,11 +87,17 @@ public class ViewModelLifecycleTests
         Assert.Equal("Equalizer", eqVm.Title);
         Assert.True(eqVm.IsEqEnabled);
 
-        // Navigate to Synchronization
+        // Navigate to Synchronization (Manual)
         navService.NavigateTo<SynchronizationViewModel>();
         Assert.IsType<SynchronizationViewModel>(mainVm.CurrentView);
         var syncVm = (SynchronizationViewModel)mainVm.CurrentView;
         Assert.Equal("Synchronization", syncVm.Title);
+
+        // Navigate to Automatic Sync Calibration
+        navService.NavigateTo<AutomaticSyncViewModel>();
+        Assert.IsType<AutomaticSyncViewModel>(mainVm.CurrentView);
+        var autoSyncVm = (AutomaticSyncViewModel)mainVm.CurrentView;
+        Assert.Equal("Automatic Sync Calibration", autoSyncVm.Title);
 
         // Navigate to Settings
         navService.NavigateTo<SettingsViewModel>();
@@ -240,12 +250,12 @@ public class ViewModelLifecycleTests
 
         Assert.Equal(AudioEngineState.Stopped, engine.State);
     }
+}
 
-    private sealed class TestDispatcherService : IDispatcherService
-    {
-        public void Invoke(Action action) => action();
-        public Task InvokeAsync(Action action) { action(); return Task.CompletedTask; }
-        public Task<T> InvokeAsync<T>(Func<T> func) => Task.FromResult(func());
-    }
+internal sealed class TestDispatcherService : IDispatcherService
+{
+    public void Invoke(Action action) => action();
+    public Task InvokeAsync(Action action) { action(); return Task.CompletedTask; }
+    public Task<T> InvokeAsync<T>(Func<T> func) => Task.FromResult(func());
 }
 
